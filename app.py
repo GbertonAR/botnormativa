@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, render_template
 import sqlite3
 import re
+import os
 import google.generativeai as genai
 
 app = Flask(__name__)
@@ -10,7 +11,8 @@ genai.configure(api_key="AIzaSyALSGwm8GtQNIyiofZJ0fBZf2jvAbpz_vo")
 
 # 📂 Ruta de la base de datos
 #DB_PATH = "/home/gberton/gberton2025/BOTNormativa/docu1/normativas.db"
-DB_PATH = ("/home/gberton/gberton2025/BOTNormativa/docu1/normativas.db")
+#DB_PATH = ("/home/gberton/gberton2025/BOTNormativa/docu1/normativas.db")
+DB_PATH = os.environ.get("DB_PATH_NORMATIVAS")
 
 # 🔍 Función para extraer número de normativa desde la pregunta
 def extraer_numero_normativa(pregunta):
@@ -142,4 +144,5 @@ def api_consulta():
     #     return jsonify({"mensaje": "No se encontraron normativas para la consulta."}), 404
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    #app.run(debug=True, port=5000)
+    app.run(host="0.0.0.0", debug=True)
