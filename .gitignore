@@ -1,0 +1,21 @@
+# Archivos del sistema de Ubuntu
+.cache/
+.Trash-*/
+.lock
+~$
+
+# Carpetas de Python (si usas Python)
+__pycache__/
+*.pyc
+venv/
+
+# Configuraciones y credenciales
+
+
+# Archivos de compilación y logs
+
+
+# Carpetas y archivos de proyectos específicos
+/build/
+docu/
+bk29032025OK/

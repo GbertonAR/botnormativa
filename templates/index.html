@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bot Normativa</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1 class="tit-buscador">Consultas sobre Normativas</h1>
+        <form id="consultaForm" method="POST">
+            <label for="numero_norma">Número de normativa:</label>
+            <input type="text" id="numero_norma" name="numero_norma" placeholder="Ejemplo: 1234" required>
+            
+            <label for="consulta">Ingrese su consulta:</label>
+            <input type="text" id="consulta" name="consulta" placeholder="Escriba su consulta aquí" required>
+            
+            <button type="submit">Consultar</button>
+        </form>
+        
+        <div id="respuesta"></div>
+        <div id="ejemplo"></div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const form = document.getElementById("consultaForm");
+            const numeroNormaInput = document.getElementById("numero_norma");
+            const consultaInput = document.getElementById("consulta");
+            const respuestaDiv = document.getElementById("respuesta");
+            const ejemploDiv = document.getElementById("ejemplo");
+            
+            form.addEventListener("submit", function (event) {
+                event.preventDefault();
+                const numeroNorma = numeroNormaInput.value.trim();
+                const consulta = consultaInput.value.trim();
+                
+                if (numeroNorma === "" || consulta === "") {
+                    respuestaDiv.innerHTML = "<p class='error'>Por favor, complete ambos campos.</p>";
+                    return;
+                }
+                
+                respuestaDiv.innerHTML = "<p class='cargando'>Procesando consulta...</p>";
+                
+                fetch("/api/consulta", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ numero_norma: numeroNorma, consulta: consulta })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Error HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Datos recibidos de la API:", data);
+                
+                    if (Array.isArray(data) && data.length > 0) {
+                        const normativa = data[0];
+                        const contenidoFormateado = normativa.contenido.replace(/\*\*(.*?)\:/g, "<strong><u style='text-align: left;'>$1:</u></strong>");
+                
+                        // Inserción del contenido generado dentro de la estructura HTML
+                        respuestaDiv.innerHTML = `
+                            <h2>Resumen:</h2>
+                            <p><strong>Tipo:</strong> ${normativa.tipo} | <strong>Fecha:</strong> ${normativa.fecha} | <strong>Número:</strong> ${normativa.numero}</p>
+                            <p><strong>Contenido:</strong></p>
+                            <ul>
+
+                                ${contenidoFormateado.split("*")
+                                    .map(item => item.trim()) // Asegurarse de que no haya espacios adicionales
+                                    .filter(item => item !== "") // Filtrar elementos vacíos
+                                    .map(item => `<li style="text-align: left;">${item}</li>`)
+                                    .join("")}                                 
+                            </ul>   
+                        `;
+                        ejemploDiv.innerHTML = "";
+                    } else if (data.mensaje) {
+                        respuestaDiv.innerHTML = `<p class='error'>${data.mensaje}</p>`;
+                        ejemploDiv.innerHTML = "";
+                    } else {
+                        respuestaDiv.innerHTML = "<p class='error'>Respuesta inesperada del servidor.</p>";
+                        ejemploDiv.innerHTML = "";
+                    }
+                })
+                .catch(error => {
+                    console.error("Error en la petición:", error);
+                    respuestaDiv.innerHTML = "<p class='error'>Ocurrió un error al procesar la consulta. Intente nuevamente.</p>";
+                });
+            });
+        });
+    </script>
+</body>
+<footer>
+    <!-- <p>© 2025 Licencia Nacional de Conducir Digital | Todos los derechos reservados</p> -->
+    <p>Versión: 1.0.0 | Fecha de última actualización: Marzo 2025</p>
+    <!-- <p><strong>ANSV:</strong> Agencia Nacional de Seguridad Vial</p> -->
+</footer>
+</html>
