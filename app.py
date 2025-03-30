@@ -13,6 +13,11 @@ genai.configure(api_key="AIzaSyALSGwm8GtQNIyiofZJ0fBZf2jvAbpz_vo")
 #DB_PATH = "/home/gberton/gberton2025/BOTNormativa/docu1/normativas.db"
 #DB_PATH = ("/home/gberton/gberton2025/BOTNormativa/docu1/normativas.db")
 DB_PATH = os.environ.get("DB_PATH_NORMATIVAS")
+#DB_PATH =("site/wwwroot/normativas.db")
+#DB_PATH =("./docu1/normativas.db")
+#DB_PATH =("wwwroot/normativas.db")
+#DB_PATH =("site/wwwroot/normativas.db")
+print(f"Este es el valor de DB", DB_PATH)
 
 # 🔍 Función para extraer número de normativa desde la pregunta
 def extraer_numero_normativa(pregunta):
@@ -22,7 +27,13 @@ def extraer_numero_normativa(pregunta):
 # 🔍 Función para obtener normativa desde la base de datos
 def obtener_normativa(numero=None, consulta=None):
     try:
-        conn = sqlite3.connect(DB_PATH)
+        print(f"Ver valores de la cariable DB", DB_PATH)
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            print(f"Conexión a la base de datos exitosa: {DB_PATH}")
+        except sqlite3.Error as e:
+            print(f"Error al conectar a la base de datos: {e}")
+            return None, f"Error al conectar a la base de datos: {e}"
         cursor = conn.cursor()
     except sqlite3.Error as e:
         print(f"Error al conectar a la base de datos '{DB_PATH}':")
@@ -33,8 +44,10 @@ def obtener_normativa(numero=None, consulta=None):
 
     if numero and consulta:
         # Buscar normativa por número y filtrar por contenido
+        numero_norma_int = int(numero)
+        #print(f"Estos son los valores de numero y consulta", {numero}, {consulta}, {numero_norma_int})
         cursor.execute("SELECT tipo, fecha, numero, contenido FROM normativas WHERE numero = ? OR contenido LIKE ?", 
-                       (numero, f"%{consulta}%"))
+                       (numero_norma_int, f"%{consulta}%"))
         resultado = cursor.fetchall()
     elif numero:
         # Buscar normativa solo por número
