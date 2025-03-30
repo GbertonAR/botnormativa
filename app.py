@@ -12,8 +12,8 @@ genai.configure(api_key="AIzaSyALSGwm8GtQNIyiofZJ0fBZf2jvAbpz_vo")
 # 📂 Ruta de la base de datos
 #DB_PATH = "/home/gberton/gberton2025/BOTNormativa/docu1/normativas.db"
 #DB_PATH = ("/home/gberton/gberton2025/BOTNormativa/docu1/normativas.db")
-DB_PATH = os.environ.get("DB_PATH_NORMATIVAS")
-#DB_PATH =("site/wwwroot/normativas.db")
+#DB_PATH = os.environ.get("DB_PATH_NORMATIVAS")
+DB_PATH =("/home/site/wwwroot/normativas.db")
 #DB_PATH =("./docu1/normativas.db")
 #DB_PATH =("wwwroot/normativas.db")
 #DB_PATH =("site/wwwroot/normativas.db")
