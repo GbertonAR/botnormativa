@@ -1,16 +1,27 @@
 #!/bin/bash
-apt-get update
-#apt-get -y install tesseract-ocr libtesseract-dev
+set -e
 
-# O si necesitas paquetes de idioma (ejemplo para español):
-apt-get -y install tesseract-ocr tesseract-ocr-spa
+echo "Ejecutando script de despliegue personalizado..."
 
-# Asegúrate de que Python pueda encontrar Tesseract (añade la ruta a PATH si es necesario)
-# export PATH="$PATH:/usr/local/bin:/usr/bin:/opt/tesseract/bin"
+# Actualizar los repositorios
+echo "Actualizando repositorios..."
+sudo apt-get update
 
-# Resto de tus comandos de despliegue (activación de entorno virtual, instalación de requirements, etc.)
-#if [ -f "$DEPLOYMENT_TARGET/requirements.txt" ]; then
-#    python -m pip install -r "$DEPLOYMENT_TARGET/requirements.txt" --no-cache-dir
-#fi
+# Instalar Tesseract OCR y paquetes de idioma español
+echo "Instalando Tesseract OCR y paquete de idioma español..."
+sudo apt-get -y install tesseract-ocr tesseract-ocr-spa
 
-# Cualquier otro comando necesario para tu aplicación
+echo "Tesseract OCR instalado."
+
+# Instalar dependencias de Python desde requirements.txt
+echo "Instalando dependencias de Python..."
+if [ -f "$HOME/site/wwwroot/requirements.txt" ]; then
+    python -m pip install -r "$HOME/site/wwwroot/requirements.txt" --no-cache-dir
+fi
+
+echo "Dependencias de Python instaladas."
+
+# Puedes agregar aquí cualquier otro comando que necesites ejecutar
+# después de la instalación de Tesseract y las dependencias.
+
+echo "Script de despliegue personalizado completado."
