@@ -398,8 +398,8 @@
                         infoDiv.style.display = 'block';
                     } else {
                         infoDiv.style.display = 'none';
-                        alert('No se pudieron leer los datos del dorso del DNI.');
-                    }
+                        alert('No se pudieron leer los datos del dorso del DNI. Nombre: ${data.nombre} Apellidos: ${data.apellidos} Número de Documento: ${data.numero_documento}');
+                    }  
                 } else {
                     console.log(`Datos para ${documentType}:`, data);
                 }
@@ -410,7 +410,7 @@
                 infoDiv.style.display = 'none';
             }
         }
-        
+
         function dataURLtoBlob(dataurl) {
             const arr = dataurl.split(',');
             const mime = arr[0].match(/:(.*?);/)[1];
