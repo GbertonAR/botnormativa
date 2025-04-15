@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Proceso de Canje</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/canje.css') }}">
+    <style>
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr 1.5fr 1.5fr; /* Ajuste de proporciones de columnas */
+            gap: 10px; /* Reducción del espacio entre elementos */
+            padding: 10px; /* Reducción del padding general */
+        }
+        .document-buttons button {
+            display: block;
+            width: 90%; /* Achicar la botonera */
+            margin: 5px auto; /* Centrar y reducir margen vertical */
+            padding: 8px; /* Reducir el padding de los botones */
+            box-sizing: border-box;
+            font-size: 0.9em; /* Reducir el tamaño de la fuente de los botones */
+        }
+        .preview-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .preview {
+            width: 100%;
+            height: auto; /* Altura automática para mantener la proporción */
+            border: 1px solid #ccc;
+            margin-bottom: 5px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .preview img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        .document-info {
+            margin-top: 10px;
+            padding: 8px;
+            border: 1px solid #eee;
+            background-color: #f9f9f9;
+            text-align: left; /* Alinear el texto a la izquierda en la columna de datos */
+        }
+        .document-info p {
+            margin: 3px 0;
+            font-size: 0.9em; /* Reducir el tamaño de la fuente de los datos */
+        }
+    </style>
+</head>
+<body>
+    <h1>Proceso de Canje de Documentación</h1>
+    <nav>
+        <a href="/">Inicio</a>
+        <a href="{{ url_for('canje.capture_canje_form') }}">Captura Canje</a>
+        <a href="{{ url_for('canje.canje_form') }}">Canje</a>
+        <div class="dropdown">
+            <a href="#">Soporte</a>
+            <div class="dropdown-content">
+                <a href="/">Gráfico</a>
+            </div>
+        </div>
+        <a href="#">Contacto</a>
+    </nav>
+    <div class="container">
+        <div class="document-buttons">
+            <button id="frente_dni_button" class="scan-button rojo" onclick="triggerScan('frente_dni')">Frente DNI</button>
+            <button id="dorso_dni_button" class="scan-button rojo" onclick="triggerScan('dorso_dni')">Dorso DNI</button>
+            <button id="licencia_municipal_frente_button" class="scan-button rojo" onclick="triggerScan('licencia_municipal_frente')">Lic. Municipal Frente</button>
+            <button id="licencia_municipal_dorso_button" class="scan-button rojo" onclick="triggerScan('licencia_municipal_dorso')">Lic. Municipal Dorso</button>
+            <button id="psicofisico_button" class="scan-button rojo" onclick="triggerScan('psicofisico')">Psicofisico</button>
+            <button id="certificado_curso_button" class="scan-button rojo" onclick="triggerScan('certificado_curso')">Certificado Curso</button>
+            <button id="licencia_linti_button" class="scan-button rojo" onclick="triggerScan('licencia_linti')">Licencia Linti</button>
+            <button id="certificado_legalidad_button" class="scan-button rojo" onclick="triggerScan('certificado_legalidad')">Certificado Legalidad</button>
+            <button type="button" onclick="procesarDocumentos()">Procesar Documentos</button>
+        </div>
+        <div class="preview-container">
+            <strong>Frente DNI</strong>
+            <div id="preview_frente_dni" class="preview"></div>
+        </div>
+        <div class="preview-container">
+            <strong>Dorso DNI</strong>
+            <div id="preview_dorso_dni" class="preview"></div>
+        </div>
+        <div class="preview-container">
+            <strong>Datos DNI</strong>
+            <div id="dorso_dni_info" class="document-info" style="display: none;">
+                <p><strong>Nombre:</strong> <span id="nombre_leido"></span></p>
+                <p><strong>Apellidos:</strong> <span id="apellidos_leido"></span></p>
+                <p><strong>Número:</strong> <span id="numero_documento_leido"></span></p>
+            </div>
+        </div>
+        <div class="preview-container">
+            <strong>Licencia Municipal Frente</strong>
+            <div id="preview_licencia_municipal_frente" class="preview"></div>
+        </div>
+        <div class="preview-container">
+            <strong>Licencia Municipal Dorso</strong>
+            <div id="preview_licencia_municipal_dorso" class="preview"></div>
+        </div>
+        <div class="preview-container">
+            <strong>Psicofisico</strong>
+            <div id="preview_psicofisico" class="preview"></div>
+        </div>
+        <div class="preview-container">
+            <strong>Certificado Curso</strong>
+            <div id="preview_certificado_curso" class="preview"></div>
+        </div>
+        <div class="preview-container">
+            <strong>Licencia Linti</strong>
+            <div id="preview_licencia_linti" class="preview"></div>
+        </div>
+        <div class="preview-container">
+            <strong>Certificado Legalidad</strong>
+            <div id="preview_certificado_legalidad" class="preview"></div>
+        </div>
+    </div>
+
+    <div id="additional-data-form">
+        <h3>Información Adicional</h3>
+        <div class="choice-button-group">
+            <label for="ciudadano_presente_no">¿El ciudadano está presente?</label>
+            <input type="radio" id="ciudadano_presente_no" name="ciudadano_presente" value="NO" checked> NO
+            <input type="radio" id="ciudadano_presente_si" name="ciudadano_presente" value="SI"> SI
+        </div>
+        <label for="provincia">Provincia:</label>
+        <select id="provincia">
+            <option value="">Seleccione una provincia</option>
+        </select><br><br>
+        <label for="municipio">Municipio:</label>
+        <select id="municipio" disabled>
+            <option value="">Seleccione un municipio</option>
+        </select><br><br>
+        <button type="button" onclick="guardarDatos()">Guardar Datos</button>
+    </div>
+
+    <form id="upload_form" method="POST" action="/canje/upload" enctype="multipart/form-data" style="display:none;">
+        <input type="file" name="document" id="document_upload">
+        <input type="hidden" name="document_type" id="document_type">
+    </form>    
+
+    <script>
+        const datosDocumentos = {}; // Objeto para almacenar datos de los documentos
+
+        function triggerScan(documentType) {
+            document.getElementById('document_type').value = documentType;
+            document.getElementById('document_upload').click();
+        }
+
+        document.getElementById('document_upload').addEventListener('change', function() {
+            const file = this.files[0];
+            const documentType = document.getElementById('document_type').value;
+            const previewElementId = 'preview_' + documentType;
+            const previewElement = document.getElementById(previewElementId);
+            const buttonElement = document.getElementById(documentType + '_button');
+
+            console.log('documentType:', documentType); // *** AÑADIDO PARA DEBUG ***
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (previewElement) { // *** AGREGADO PARA EVITAR EL ERROR ***
+                        previewElement.innerHTML = `<img src="${e.target.result}" style="max-width: 100%; max-height: 100%;">`;
+                        buttonElement.className = 'scan-button verde';
+
+                        const formData = new FormData();
+                        formData.append('document', file);
+                        formData.append('document_type', documentType);
+
+                        fetch('/canje/upload', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log('Respuesta del servidor:', data);
+                            datosDocumentos[documentType] = data; // Almacenar los datos recibidos
+
+                            if (documentType === 'dorso_dni') {
+                                const infoDiv = document.getElementById('dorso_dni_info');
+                                const nombreSpan = document.getElementById('nombre_leido');
+                                const apellidosSpan = document.getElementById('apellidos_leido');
+                                const numeroSpan = document.getElementById('numero_documento_leido');
+
+                                if (data.nombre && data.apellidos && data.numero_documento) {
+                                    nombreSpan.textContent = data.nombre;
+                                    apellidosSpan.textContent = data.apellidos;
+                                    numeroSpan.textContent = data.numero_documento;
+                                    infoDiv.style.display = 'block';
+                                } else {
+                                    infoDiv.style.display = 'none';
+                                    alert('No se pudieron leer los datos del dorso del DNI.');
+                                }
+                            } else {
+                                console.log(`Datos para ${documentType}:`, data);
+                                // Aquí podríamos almacenar otros datos si es necesario para futuras validaciones
+                            }
+                            document.getElementById('document_upload').value = ''; // Resetear input
+                        })
+                        .catch(error => {
+                            console.error('Error al subir el archivo:', error);
+                            alert('Error al subir el archivo.');
+                            const infoDiv = document.getElementById('dorso_dni_info');
+                            infoDiv.style.display = 'none';
+                            document.getElementById('document_upload').value = ''; // Resetear input en caso de error
+                        });
+                    } else {
+                        console.error(`No se encontró el elemento de vista previa con ID: preview_${documentType}`);
+                    }
+                };
+                reader.readAsDataURL(file);
+            } else {
+                if (previewElement) {
+                    previewElement.innerHTML = '';
+                }
+                buttonElement.className = 'scan-button rojo';
+                if (documentType === 'dorso_dni') {
+                    document.getElementById('dorso_dni_info').style.display = 'none';
+                }
+            }
+        });
+
+        function procesarDocumentos() {
+            console.log('Datos de los documentos:', datosDocumentos);
+            // Aquí implementarás la lógica para validar los datos entre los documentos
+            // Por ejemplo, comparar datos del 'dorso_dni' con otros documentos
+            if (datosDocumentos['dorso_dni'] && datosDocumentos['certificado_curso']) {
+                const dniDorso = datosDocumentos['dorso_dni'].numero_documento;
+                // Aquí podrías intentar extraer el DNI del certificado_curso si fuera necesario
+                // y luego compararlos.
+                console.log('DNI del dorso:', dniDorso);
+                // console.log('Posible DNI del certificado:', ...);
+                // if (dniDorso === ...) {
+                //     alert('Los DNI coinciden.');
+                // } else {
+                //     alert('Los DNI no coinciden.');
+                // }
+            } else {
+                alert('Por favor, carga al menos el dorso del DNI y el certificado del curso para la validación (ejemplo).');
+            }
+            // Después de las validaciones, podrías enviar los datos al servidor
+            // fetch('/canje/procesar_validacion', {
+            //     method: 'POST',
+            //     headers: {
+            //         'Content-Type': 'application/json'
+            //     },
+            //     body: JSON.stringify(datosDocumentos)
+            // })
+            // .then(response => response.json())
+            // .then(data => {
+            //     console.log('Respuesta de validación:', data);
+            //     // Manejar la respuesta de la validación
+            // })
+            // .catch(error => {
+            //     console.error('Error al enviar para validación:', error);
+            // });
+        }
+
+        // Función para procesar los documentos y validar
+function procesarDocumentos() {
+    console.log('Datos de los documentos:', datosDocumentos);
+    let erroresEncontrados = false;
+
+    // Función auxiliar para cambiar el color del botón
+    function cambiarColorBoton(documentType, color) {
+        const buttonId = documentType + '_button';
+        const button = document.getElementById(buttonId);
+        if (button) {
+            button.className = `scan-button ${color}`;
+        }
+    }
+
+    // Validación del Frente del DNI
+    function procesarDocumentos() {
+        console.log('Datos de los documentos:', datosDocumentos);
+        let erroresEncontrados = false;
+    
+        // Función auxiliar para cambiar el color del botón
+        function cambiarColorBoton(documentType, color) {
+            const buttonId = documentType + '_button';
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.className = `scan-button ${color}`;
+            }
+        }
+    
+        // Validación del Psicofísico
+        if (datosDocumentos['psicofisico'] && datosDocumentos['psicofisico'].ocr_text && datosDocumentos['dorso_dni']) {
+            const ocrPsicofisico = datosDocumentos['psicofisico'].ocr_text.toLowerCase();
+            const apellidoDNI = datosDocumentos['dorso_dni'].apellidos.toLowerCase();
+            const dniDNI = datosDocumentos['dorso_dni'].numero_documento;
+            let errorPsicofisico = false;
+    
+            if (!ocrPsicofisico.includes(apellidoDNI)) {
+                alert(`Error: El apellido "${apellidoDNI}" del DNI no se encuentra en el Psicofísico.`);
+                errorPsicofisico = true;
+            }
+            if (!ocrPsicofisico.includes(dniDNI)) {
+                alert(`Error: El número de DNI "${dniDNI}" no se encuentra en el Psicofísico.`);
+                errorPsicofisico = true;
+            }
+    
+            if (errorPsicofisico) {
+                cambiarColorBoton('psicofisico', 'rojo');
+                erroresEncontrados = true;
+            } else {
+                if (document.getElementById('psicofisico_button').className.includes('rojo')) {
+                    cambiarColorBoton('psicofisico', 'verde');
+                }
+            }
+        } else if (!datosDocumentos['psicofisico']) {
+            alert('Advertencia: No se ha cargado el Psicofísico, no se pudieron verificar los datos.');
+        } else if (datosDocumentos['psicofisico'] && !datosDocumentos['psicofisico'].ocr_text) {
+            alert('Advertencia: No se pudo extraer texto del Psicofísico para la validación de apellido y DNI.');
+        } else if (!datosDocumentos['dorso_dni']) {
+            alert('Advertencia: No se ha cargado el Dorso del DNI, no se pueden verificar los datos del Psicofísico.');
+        }
+    
+        if (erroresEncontrados) {
+            alert('Se encontraron errores en la validación de los documentos. Por favor, revisa los botones en rojo.');
+            return;
+        } else {
+            alert('Las validaciones básicas se completaron sin errores (según las validaciones implementadas). Procediendo con el procesamiento.');
+            // Aquí continuarías con el siguiente paso del proceso
+        }
+    }
+}
+    </script>
+</body>
+</html>

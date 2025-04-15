@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Buscar Registro</title>
+</head>
+<body>
+    <h1>Buscar Registro</h1>
+    <form method="POST" action="{{ url_for('buscar_registro') }}">
+        <div>
+            <label for="tramite_id">Número de Trámite:</label>
+            <input type="text" id="tramite_id" name="tramite_id" required>
+        </div>
+        <button type="submit">Buscar</button>
+    </form>
+    <!--
+    <p><a href="{{ url_for('canje.index') }}">Volver al inicio</a></p>
+    -->
+    <p><a href="/">Volver al inicio</a></p>
+</body>
+</html>

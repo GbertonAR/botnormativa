@@ -1,0 +1,134 @@
+body {
+    /*font-family: 'Arial', sans-serif;*/
+    background-color: #005c99;
+    color: white;
+    text-align: center;
+    margin: 0;
+    padding: 20px;
+
+    letter-spacing: -0.15pt;
+    font-size: 18px;
+    font-family: "Montserrat", sans-serif;
+}
+
+/* Tarjetas de consulta */
+.card {
+    background-color:  #003366;
+    color: white;
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border-style: solid;
+    cursor: pointer;
+    width: 80%; /* Ajusta el ancho de la tarjeta */
+    max-width: 600px; /* Ancho máximo para pantallas más grandes */
+    text-align: center; /* Centra el texto dentro de la tarjeta */
+    transition: all 0.3s ease-in-out;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.card:hover {
+    background-color: #007bb5;
+}
+
+/* Contenido desplegable */
+.card-content {
+    display: none;
+    background-color: #003366;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+nav {
+    background-color: #003366;
+    padding: 15px;
+    text-align: center; /* Esto centrará el menú horizontalmente */
+    display: flex; /* Usamos flexbox para la disposición horizontal */
+    justify-content: center; /* Centra los elementos del menú horizontalmente */
+    align-items: center; /* Alinea los elementos del menú verticalmente al centro (opcional) */
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+    margin: 0 15px; /* Reduce un poco el margen para que quepan más elementos */
+    font-size: 18px;
+}
+
+nav a:hover {
+    color: #ffcc00;
+}
+
+/* Campos de entrada */
+.chat-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.chat-form input {
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: 1px solid #00b3e6;
+    background-color: #e6f7ff;
+    color: #003366;
+}
+
+.chat-form input:focus {
+    border-color: #005c99;
+    outline: none;
+}
+
+
+.container {
+    display: flex;
+}
+
+.document-buttons {
+    width: 250px;
+    padding-right: 20px;
+}
+
+.scan-button {
+    padding: 10px 15px;
+    margin-bottom: 5px;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    text-align: left;
+}
+
+.rojo {
+    background-color: #ffe0e0;
+    color: #ff0000;
+}
+
+.verde {
+    background-color: #e0ffe0;
+    color: #00ff00;
+}
+
+.document-preview {
+    flex-grow: 1;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.preview {
+    width: 220px;
+    height: 220px;
+    margin: 5px;
+    border: 1px solid #eee;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+.preview img {
+    max-width: 100%;
+    max-height: 100%;
+}

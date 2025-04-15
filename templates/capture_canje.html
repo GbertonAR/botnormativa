@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Proceso de Canje - Captura de Imagen</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/canje.css') }}">
+    <style>
+        /* ... (tus estilos CSS existentes) ... */
+        #camera-preview {
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+        }
+        .capture-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+    </style>
+</head>
+<body>
+    <h1>Proceso de Canje de Documentación</h1>
+    <nav>
+        <a href="/">Inicio</a>
+        <a href="{{ url_for('canje.capture_canje_form') }}">Captura Canje</a>
+        <a href="{{ url_for('canje.canje_form') }}">Canje</a>
+        <div class="dropdown">
+            <a href="#">Soporte</a>
+            <div class="dropdown-content">
+                <a href="/">Gráfico</a>
+            </div>
+        </div>
+        <a href="#">Contacto</a>
+    </nav>
+    <div class="menu-horizontal">
+        <button id="frente_dni_button" class="capture-button" onclick="startCapture('frente_dni')">Capturar Frente DNI</button>
+        <button id="dorso_dni_button" class="capture-button" onclick="startCapture('dorso_dni')">Capturar Dorso DNI</button>
+        <button id="licencia_municipal_frente_button" class="capture-button" onclick="startCapture('licencia_municipal_frente')">Capturar Lic. Municipal Frente</button>
+        <button id="licencia_municipal_dorso_button" class="capture-button" onclick="startCapture('licencia_municipal_dorso')">Capturar Lic. Municipal Dorso</button>
+        <button id="psicofisico_button" class="capture-button" onclick="startCapture('psicofisico')">Capturar Psicofisico</button>
+        <button id="certificado_curso_button" class="capture-button" onclick="startCapture('certificado_curso')">Capturar Certificado Curso</button>
+        <button id="licencia_linti_button" class="capture-button" onclick="startCapture('licencia_linti')">Capturar Licencia Linti</button>
+        <button id="certificado_legalidad_button" class="capture-button" onclick="startCapture('certificado_legalidad')">Capturar Certificado Legalidad</button>
+    </div>
+
+    <div class="container">
+        <div class="preview-container">
+            <strong>Vista Previa Cámara</strong>
+            <video id="camera-preview" autoplay playsinline></video>
+            <button id="capture-image" disabled>Capturar Imagen</button>
+        </div>
+        <div class="preview-container">
+            <strong>Frente DNI</strong>
+            <canvas id="preview_frente_dni" class="preview" width="300" height="200"></canvas>
+        </div>
+        <div class="preview-container">
+            <strong>Dorso DNI</strong>
+            <canvas id="preview_dorso_dni" class="preview" width="300" height="200"></canvas>
+        </div>
+        <div class="preview-container">
+            <strong>Datos DNI</strong>
+            <div id="dorso_dni_info" class="document-info" style="display: none;">
+                <p><strong>Nombre:</strong> <span id="nombre_leido"></span></p>
+                <p><strong>Apellidos:</strong> <span id="apellidos_leido"></span></p>
+                <p><strong>Número:</strong> <span id="numero_documento_leido"></span></p>
+            </div>
+        </div>
+        <div class="preview-container">
+            <strong>Licencia Municipal Frente</strong>
+            <canvas id="preview_licencia_municipal_frente" class="preview" width="300" height="200"></canvas>
+        </div>
+        <div class="preview-container">
+            <strong>Licencia Municipal Dorso</strong>
+            <canvas id="preview_licencia_municipal_dorso" class="preview" width="300" height="200"></canvas>
+        </div>
+        <div class="preview-container">
+            <strong>Psicofisico</strong>
+            <canvas id="preview_psicofisico" class="preview" width="300" height="200"></canvas>
+        </div>
+        <div class="preview-container">
+            <strong>Certificado Curso</strong>
+            <canvas id="preview_certificado_curso" class="preview" width="300" height="200"></canvas>
+        </div>
+        <div class="preview-container">
+            <strong>Licencia Linti</strong>
+            <canvas id="preview_licencia_linti" class="preview" width="300" height="200"></canvas>
+        </div>
+        <div class="preview-container">
+            <strong>Certificado Legalidad</strong>
+            <canvas id="preview_certificado_legalidad" class="preview" width="300" height="200"></canvas>
+        </div>
+        <button type="button" onclick="procesarDocumentos()">Procesar Documentos</button>
+    </div>
+
+    <script>
+        const datosDocumentos = {};
+        let currentDocumentType = null;
+        const cameraPreview = document.getElementById('camera-preview');
+        const captureButton = document.getElementById('capture-image');
+        let mediaStream = null;
+
+        async function startCamera() {
+            try {
+                mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                cameraPreview.srcObject = mediaStream;
+                captureButton.disabled = false;
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                alert('No se pudo acceder a la cámara.');
+            }
+        }
+
+        function stopCamera() {
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                cameraPreview.srcObject = null;
+                captureButton.disabled = true;
+            }
+        }
+
+        function startCapture(documentType) {
+            currentDocumentType = documentType;
+            startCamera();
+        }
+
+        captureButton.addEventListener('click', function() {
+            if (currentDocumentType && mediaStream) {
+                const canvas = document.getElementById(`preview_${currentDocumentType}`);
+                const context = canvas.getContext('2d');
+                canvas.width = cameraPreview.videoWidth;
+                canvas.height = cameraPreview.videoHeight;
+                context.drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
+                stopCamera();
+                sendCapturedImage(canvas.toDataURL('image/jpeg'), currentDocumentType);
+                currentDocumentType = null;
+            } else {
+                alert('Por favor, inicia la captura de un documento primero.');
+            }
+        });
+
+        async function sendCapturedImage(imageData, documentType) {
+            const formData = new FormData();
+            formData.append('document', dataURLtoBlob(imageData), `${documentType}.jpeg`);
+            formData.append('document_type', documentType);
+
+            const previewElement = document.getElementById(`preview_${documentType}`);
+            const buttonElement = document.getElementById(`${documentType}_button`);
+            if (buttonElement) {
+                buttonElement.className = 'scan-button verde';
+            }
+
+            try {
+                const response = await fetch('/canje/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                console.log('Respuesta del servidor:', data);
+                datosDocumentos[documentType] = data;
+
+                if (documentType === 'dorso_dni') {
+                    const infoDiv = document.getElementById('dorso_dni_info');
+                    const nombreSpan = document.getElementById('nombre_leido');
+                    const apellidosSpan = document.getElementById('apellidos_leido');
+                    const numeroSpan = document.getElementById('numero_documento_leido');
+
+                    if (data.nombre && data.apellidos && data.numero_documento) {
+                        nombreSpan.textContent = data.nombre;
+                        apellidosSpan.textContent = data.apellidos;
+                        numeroSpan.textContent = data.numero_documento;
+                        infoDiv.style.display = 'block';
+                    } else {
+                        infoDiv.style.display = 'none';
+                        alert('No se pudieron leer los datos del dorso del DNI.');
+                    }
+                } else {
+                    console.log(`Datos para ${documentType}:`, data);
+                }
+            } catch (error) {
+                console.error('Error al subir la imagen capturada:', error);
+                alert('Error al subir la imagen capturada.');
+                const infoDiv = document.getElementById('dorso_dni_info');
+                infoDiv.style.display = 'none';
+            }
+        }
+
+        function dataURLtoBlob(dataurl) {
+            const arr = dataurl.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new Blob([u8arr], { type: mime });
+        }
+
+        function procesarDocumentos() {
+            console.log('Datos de los documentos:', datosDocumentos);
+            // ... (tu lógica de validación y procesamiento existente) ...
+        }
+    </script>
+</body>
+</html>

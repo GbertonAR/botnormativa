@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Resultados del Proceso</title>
+</head>
+<body>
+    <h1>Resultados del Proceso</h1>
+
+    {% if nombre %}
+        <p><strong>Nombre:</strong> {{ nombre }}</p>
+    {% endif %}
+
+    {% if apellidos %}
+        <p><strong>Apellidos:</strong> {{ apellidos }}</p>
+    {% endif %}
+
+    {% if numero_documento %}
+        <p><strong>Número de Documento:</strong> {{ numero_documento }}</p>
+    {% endif %}
+
+    {% if ocr_text %}
+        <h2>Texto OCR (Otros Documentos)</h2>
+        <pre>{{ ocr_text }}</pre>
+    {% endif %}
+
+    <p><a href="/canje/">Volver</a></p>
+</body>
+</html>

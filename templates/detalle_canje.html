@@ -1,0 +1,21 @@
+{% extends 'canje_base.html' %}
+
+{% block title %}Detalle de Canje{% endblock %}
+
+{% block content %}
+    <h1>Detalle del Registro de Canje</h1>
+    {% if registro %}
+        <p><strong>ID:</strong> {{ registro.id }}</p>
+        <p><strong>Ciudadano Presencial:</strong> {{ registro.ciudadano_presencial }}</p>
+        <p><strong>Fecha Ingreso:</strong> {{ registro.fecha_ingreso }}</p>
+        <p><strong>Estado:</strong> {{ registro.estado }}</p>
+        <p><strong>Provincia:</strong> {{ registro.nombre_provincia }}</p>
+        <p><strong>Municipio:</strong> {{ registro.nombre_municipio }}</p>
+        <p><strong>DNI:</strong> {{ registro.dni }}</p>
+        <p><strong>Apellido:</strong> {{ registro.apellido }}</p>
+        <p><strong>Nombre:</strong> {{ registro.nombre }}</p>
+        <button onclick="window.close()">Cerrar</button>
+    {% else %}
+        <p>Registro no encontrado.</p>
+    {% endif %}
+{% endblock %}

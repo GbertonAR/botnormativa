@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Proceso de Canje</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/canje.css') }}">
+    <style>
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr 1.5fr 1.5fr; /* Ajuste de proporciones de columnas */
+            gap: 10px; /* Reducción del espacio entre elementos */
+            padding: 10px; /* Reducción del padding general */
+        }
+        .document-buttons button {
+            display: block;
+            width: 90%; /* Achicar la botonera */
+            margin: 5px auto; /* Centrar y reducir margen vertical */
+            padding: 8px; /* Reducir el padding de los botones */
+            box-sizing: border-box;
+            font-size: 0.9em; /* Reducir el tamaño de la fuente de los botones */
+        }
+        .preview-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .preview {
+            width: 100%;
+            height: auto; /* Altura automática para mantener la proporción */
+            border: 1px solid #ccc;
+            margin-bottom: 5px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .preview img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        .document-info {
+            margin-top: 10px;
+            padding: 8px;
+            border: 1px solid #eee;
+            background-color: #f9f9f9;
+            text-align: left; /* Alinear el texto a la izquierda en la columna de datos */
+        }
+        .document-info p {
+            margin: 3px 0;
+            font-size: 0.9em; /* Reducir el tamaño de la fuente de los datos */
+        }
+    </style>
+</head>
+<body>
+    <h1>Proceso de Canje de Documentación</h1>
+    <div class="container">
+        <div class="document-buttons">
+            <button id="frente_dni_button" class="scan-button rojo" onclick="triggerScan('frente_dni')">Frente DNI</button>
+            <button id="dorso_dni_button" class="scan-button rojo" onclick="triggerScan('dorso_dni')">Dorso DNI</button>
+            <button id="licencia_municipal_frente_button" class="scan-button rojo" onclick="triggerScan('licencia_municipal_frente')">Lic. Municipal Frente</button>
+            <button id="licencia_municipal_dorso_button" class="scan-button rojo" onclick="triggerScan('licencia_municipal_dorso')">Lic. Municipal Dorso</button>
+            <button id="psicofisico_button" class="scan-button rojo" onclick="triggerScan('psicofisico')">Psicofisico</button>
+            <button id="certificado_curso_button" class="scan-button rojo" onclick="triggerScan('certificado_curso')">Certificado Curso</button>
+            <button id="licencia_linti_button" class="scan-button rojo" onclick="triggerScan('licencia_linti')">Licencia Linti</button>
+            <button id="certificado_legalidad_button" class="scan-button rojo" onclick="triggerScan('certificado_legalidad')">Certificado Legalidad</button>
+            <button type="button" onclick="procesarDocumentos()">Procesar Documentos</button>
+        </div>
+        <div class="preview-container">
+            <strong>Frente DNI</strong>
+            <div id="preview_frente_dni" class="preview"></div>
+        </div>
+        <div class="preview-container">
+            <strong>Dorso DNI</strong>
+            <div id="preview_dorso_dni" class="preview"></div>
+        </div>
+        <div class="preview-container">
+            <strong>Datos DNI</strong>
+            <div id="dorso_dni_info" class="document-info" style="display: none;">
+                <p><strong>Nombre:</strong> <span id="nombre_leido"></span></p>
+                <p><strong>Apellidos:</strong> <span id="apellidos_leido"></span></p>
+                <p><strong>Número:</strong> <span id="numero_documento_leido"></span></p>
+            </div>
+        </div>
+    </div>
+
+    <form id="upload_form" method="POST" action="/canje/upload" enctype="multipart/form-data" style="display:none;">
+        <input type="file" name="document" id="document_upload">
+        <input type="hidden" name="document_type" id="document_type">
+    </form>
+
+    <script src="{{ url_for('static', filename='js/canje.js') }}"></script>
+    <script>
+        function triggerScan(documentType) {
+            document.getElementById('document_type').value = documentType;
+            document.getElementById('document_upload').click();
+        }
+
+        document.getElementById('document_upload').addEventListener('change', function() {
+            const file = this.files[0];
+            const documentType = document.getElementById('document_type').value;
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const previewElementId = 'preview_' + documentType;
+                    document.getElementById(previewElementId).innerHTML = `<img src="${e.target.result}" style="max-width: 100%; max-height: 100%;">`;
+                    document.getElementById(documentType + '_button').className = 'scan-button verde'; // Cambiar clase del botón
+
+                    const formData = new FormData();
+                    formData.append('document', file);
+                    formData.append('document_type', documentType);
+
+                    fetch('/canje/upload', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Respuesta del servidor:', data);
+                        if (documentType === 'dorso_dni') {
+                            const infoDiv = document.getElementById('dorso_dni_info');
+                            const nombreSpan = document.getElementById('nombre_leido');
+                            const apellidosSpan = document.getElementById('apellidos_leido');
+                            const numeroSpan = document.getElementById('numero_documento_leido');
+
+                            if (data.nombre && data.apellidos && data.numero_documento) {
+                                nombreSpan.textContent = data.nombre;
+                                apellidosSpan.textContent = data.apellidos;
+                                numeroSpan.textContent = data.numero_documento;
+                                infoDiv.style.display = 'block'; // Mostrar la información
+                            } else {
+                                infoDiv.style.display = 'none'; // Ocultar si no hay datos
+                                alert('No se pudieron leer los datos del dorso del DNI.');
+                            }
+                        } else {
+                            // Manejo para otros tipos de documentos si es necesario
+                            console.log('Respuesta para otro documento:', data);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error al subir el archivo:', error);
+                        alert('Error al subir el archivo.');
+                        const infoDiv = document.getElementById('dorso_dni_info');
+                        infoDiv.style.display = 'none';
+                    });
+                };
+                reader.readAsDataURL(file);
+            } else {
+                const previewElementId = 'preview_' + documentType;
+                document.getElementById(previewElementId).innerHTML = '';
+                document.getElementById(documentType + '_button').className = 'scan-button rojo'; // Resetear clase del botón
+                if (documentType === 'dorso_dni') {
+                    document.getElementById('dorso_dni_info').style.display = 'none';
+                }
+            }
+        });
+
+        function procesarDocumentos() {
+            const formData = new FormData();
+            const files = document.getElementById('document_upload').files;
+            const documentType = document.getElementById('document_type').value;
+
+            if (files.length > 0) {
+                formData.append('documents', files[0], documentType + '_' + files[0].name);
+            }
+
+            fetch('/canje/procesar', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Respuesta del servidor:', data);
+                // Aquí puedes manejar la respuesta del servidor
+            })
+            .catch(error => {
+                console.error('Error al enviar los documentos:', error);
+            });
+        }
+    </script>
+</body>
+</html>

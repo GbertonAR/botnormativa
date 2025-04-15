@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}{% endblock %}</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/canje.css') }}">
+    <!--
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/canje.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/soporte.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/contacto.css') }}">
+    -->
+</head>
+<body>
+    {% block header %}
+    {% endblock %}
+    <nav>
+        <a href="/">Inicio</a>
+        <a href="{{ url_for('canje.capture_canje_form') }}">Captura Canje</a>
+        <a href="{{ url_for('canje.canje_form') }}">Canje</a>
+        <a href="{{ url_for('canje.obtener_datos_canje') }}">Ver Canje</a>
+        <a href="{{ url_for('canje.capture_ver_datos_canje') }}">Ver Canjes DB</a>
+        <a href="#">Contacto</a>
+    </nav>
+
+    <div class="content">
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    <footer>
+        {% block footer %}
+        {% endblock %}
+    </footer>
+</body>
+</html>

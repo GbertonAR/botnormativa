@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/canje.css') }}">    
+    <title>Visualización de Datos de Canje</title>
+    <style>
+        body {
+            font-family: "Montserrat", sans-serif;
+            margin: 20px;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+
+        .sidebar {
+            width: 150px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .sidebar button {
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .table-container {
+            flex-grow: 1;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #003366;
+        }
+
+        #totales-container {
+            margin-top: 20px;
+            padding: 10px;
+            border-top: 1px solid #ccc;
+            font-weight: bold;
+            text-align: right; /* Alinea los totales a la derecha */
+        }
+
+        #totales-container span {
+            margin-left: 15px;
+        }
+
+        .cancelar-btn {
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+
+        .procesado-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .ver-btn {
+            background-color: #008CBA;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .botones-accion {
+            display: flex;
+            gap: 5px; /* Espacio entre los botones */
+        }
+
+    </style>
+</head>
+<body>
+    <h1>Visualización de Datos de Canje</h1>
+    <nav>
+        <a href="/">Inicio</a>
+        <a href="{{ url_for('canje.capture_canje_form') }}">Captura Canje</a>
+        <a href="{{ url_for('canje.canje_form') }}">Canje</a>
+        <a href="{{ url_for('canje.obtener_datos_canje') }}">Ver Canje</a>
+        <a href="{{ url_for('canje.capture_ver_datos_canje') }}">Ver Canjes DB</a>
+        <a href="#">Contacto</a>
+    </nav>
+
+    <div id="totales-container">
+        <span>Total trámites: <span id="total-tramites">0</span></span>
+        <span>Presencial: <span id="total-presencial">0</span></span>
+        <span>No Presencial: <span id="total-no-presencial">0</span></span>
+        <span>Terminados: <span id="total-terminados">0</span></span>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <button onclick="filtrarPorEstado('Ingresado')">Ingresados</button>
+            <button onclick="filtrarPorEstado('En Proceso')">En Proceso</button>
+            <button onclick="filtrarPorEstado('Finalizado')">Finalizados</button>
+            <button onclick="mostrarTodos()">Mostrar Todos</button>
+            </div>
+
+        <div class="table-container">
+            <table id="datosCanjeTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Ciudadano Presencial</th>
+                        <th>Fecha Ingreso</th>
+                        <th>Estado</th>
+                        <th>Provincia</th>
+                        <th>Municipio</th>
+                        <th>DNI</th>
+                        <th>Apellido</th>
+                        <th>Nombre</th>
+                        <th style="text-align: center;">Acciones</th> </tr>
+                        <!--
+                        <th>Psicofísico Apellido</th>
+                        <th>Psicofísico Nombre</th>
+                        <th>Psicofísico Categoría</th>
+                        <th>Psicofísico F. Examen</th>
+                        <th>Psicofísico F. Dictamen</th>
+                        <th>Psicofísico DNI</th>
+                        <th>Psicofísico Imagen</th>
+                        <th>Curso Nombre</th>
+                        <th>Curso Apellido</th>
+                        <th>Curso DNI</th>
+                        <th>Curso Imagen</th>
+                        <th>Legalidad Nombre</th>
+                        <th>Legalidad Apellido</th>
+                        <th>Legalidad DNI</th>
+                        <th>Legalidad Imagen</th>
+                        <th>Frente DNI Imagen</th>
+                        <th>Dorso DNI Imagen</th>
+                        <th>Licencia Frente Imagen</th>
+                        <th>Licencia Dorso Imagen</th>
+                        <th>LINTI Imagen</th>
+                        <th>Curso Certificado Imagen</th>
+                        <th>Psicofísico Certificado Imagen</th>
+                        <th>Legalidad Certificado Imagen</th>
+                        -->
+                        </tr>
+                </thead>
+                <tbody id="datosCanjeBody">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function cargarDatos() {
+            fetch('/canje/obtener_datos_canje') // Reemplaza con la ruta correcta de tu API
+                .then(response => response.json())
+                .then(data => mostrarDatos(data))
+                .catch(error => console.error('Error al cargar los datos:', error));
+        }
+
+        function cargarDatos() {
+            fetch('/canje/obtener_datos_canje') // Reemplaza con la ruta correcta de tu API
+                .then(response => response.json())
+                .then(data => {
+                    mostrarDatos(data.registros); // Pasar la lista de registros a mostrarDatos
+                    actualizarTotales(data.totales); // Pasar el objeto de totales a actualizarTotales
+                })
+                .catch(error => console.error('Error al cargar los datos:', error));
+        }
+
+        function mostrarDatos(registros) { // Ahora recibe la lista de registros directamente
+            const tbody = document.getElementById('datosCanjeBody');
+            tbody.innerHTML = ''; // Limpiar la tabla antes de agregar nuevos datos
+
+            registros.forEach(row => {
+                const tr = tbody.insertRow();
+                tr.insertCell().textContent = row.id; // ID
+                const ciudadanoPresencialCell = tr.insertCell();
+                ciudadanoPresencialCell.textContent = row.ciudadano_presencial; // Ciudadano Presencial
+                if (row.ciudadano_presencial === "SI") {
+                    ciudadanoPresencialCell.style.backgroundColor = 'red';
+                    ciudadanoPresencialCell.style.textAlign = 'center';
+                    ciudadanoPresencialCell.style.fontWeight = 'bold';
+                }
+                tr.insertCell().textContent = row.fecha_ingreso; // Fecha Ingreso
+                tr.insertCell().textContent = row.estado; // Estado
+                tr.insertCell().textContent = row.nombre_provincia; // Nombre de la Provincia
+                tr.insertCell().textContent = row.nombre_municipio; // Nombre del Municipio
+                tr.insertCell().textContent = row.dni; // DNI
+                tr.insertCell().textContent = row.apellido; // Apellido
+                tr.insertCell().textContent = row.nombre; // Nombre
+                // NUEVA CELDA PARA LOS BOTONES DE ACCIÓN
+                const accionesCell = tr.insertCell();
+                accionesCell.style.textAlign = 'center'; // Centrar los botones
+                accionesCell.innerHTML = `
+                    <div class="botones-accion">
+                        <button class="cancelar-btn" onclick="cancelarRegistro(${row.id})">Cancelar</button>
+                        <button class="ver-btn" onclick="verDetalle(${row.id})">Ver</button>
+                        <button class="procesado-btn" onclick="marcarProcesado(${row.id})">Procesado</button>
+                    </div>
+                `;
+                // Agrega más celdas según las columnas que selecciones en tu backend
+            });
+        }
+
+        function verDetalle(id) {
+            const ancho = 600;
+            const alto = 400;
+            const izquierda = (screen.width - ancho) / 2;
+            const arriba = (screen.height - alto) / 2;
+        
+            window.open(`/canje/detalle/${id}`, '_blank', `width=${ancho},height=${alto},left=${izquierda},top=${arriba},menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes`);
+        }
+
+        function cancelarRegistro(id) {
+            if (confirm(`¿Seguro que desea cancelar el registro con ID ${id}?`)) {
+                // Aquí puedes agregar la lógica para enviar una petición al servidor para cancelar el registro
+                console.log(`Cancelar registro con ID: ${id}`);
+            }
+        }
+
+        function marcarProcesado(id) {
+            // Aquí puedes agregar la lógica para enviar una petición al servidor para marcar el registro como procesado
+            console.log(`Marcar como procesado el registro con ID: ${id}`);
+        }        
+
+        function actualizarTotales(totales) { // Ahora recibe el objeto de totales
+            document.getElementById('total-tramites').textContent = totales.total_tramites;
+            document.getElementById('total-presencial').textContent = totales.total_presencial;
+            document.getElementById('total-no-presencial').textContent = totales.total_no_presencial;
+            document.getElementById('total-terminados').textContent = totales.total_terminados;
+        }
+
+        function filtrarPorEstado(estado) {
+            fetch(`/canje/obtener_datos_canje?estado=${estado}`) // Envía el estado como parámetro
+                .then(response => response.json())
+                .then(data => {
+                    mostrarDatos(data.registros); // Pasar la lista de registros
+                    actualizarTotales(data.totales); // Pasar el objeto de totales
+                })
+                .catch(error => console.error('Error al filtrar los datos:', error));
+        }
+
+        function mostrarTodos() {
+            cargarDatos();
+        }
+
+        // Cargar los datos iniciales y actualizar los totales al cargar la página
+        cargarDatos();
+
+        // Actualizar los totales cada 2 minutos (120000 milisegundos)
+        setInterval(cargarDatos, 120000);
+    </script>
+</body>
+</html>

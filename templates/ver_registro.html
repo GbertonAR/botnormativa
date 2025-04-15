@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ver Registro</title>
+</head>
+<body>
+    <h1>Detalles del Registro</h1>
+    {% if registro %}
+        <dl>
+            {% for key, value in registro.items() %}
+                <dt>{{ key }}</dt>
+                <dd>{{ value }}</dd>
+            {% endfor %}
+        </dl>
+    {% else %}
+        <p>No se encontró ningún registro con el número de trámite proporcionado.</p>
+    {% endif %}
+    <p><a href="{{ url_for('canje.buscar_registro') }}">Buscar otro registro</a></p>
+    <p><a href="{{ url_for('canje.index') }}">Volver al inicio</a></p>
+</body>
+</html>

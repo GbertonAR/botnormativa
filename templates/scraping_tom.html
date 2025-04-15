@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bot Normativa</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+
+    <div class="content">
+        <h1>Bienvenido a Tratamiento Documentos</h1>
+        <h2>{{ fecha_hora }}</h2>
+    </div>
+    <nav>
+        <a href="#">Inicio</a>
+        <div class="dropdown-content">
+            <a href="/home">Home</a>
+        </div>
+        <a href="#">Scraping</a>
+        <a href="#">Trading</a>
+        <div class="dropdown">
+            <a href="#">Soporte</a>
+            <div class="dropdown-content">
+                <a href="/">Gráfico</a>
+            </div>
+        </div>
+        <a href="#">Contacto</a>
+    </nav>
+    <div class="container">
+        <h1 class="tit-buscador">Buscador de Noticias</h1>
+    </div>
+</body>
+</html>

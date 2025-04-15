@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Registro no encontrado</title>
+</head>
+<body>
+    <h1>Registro no encontrado</h1>
+    <p>No se encontró ningún registro con el número de trámite: {{ tramite_id }}</p>
+    <p><a href="{{ url_for('canje.buscar_registro') }}">Intentar de nuevo</a></p>
+    <p><a href="{{ url_for('canje.index') }}">Volver al inicio</a></p>
+</body>
+</html>

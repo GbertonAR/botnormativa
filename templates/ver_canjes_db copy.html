@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualización de Datos de Canje</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+
+        .sidebar {
+            width: 150px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .sidebar button {
+            padding: 10px 15px;
+            cursor: pointer;
+        }
+
+        .table-container {
+            flex-grow: 1;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Visualización de Datos de Canje</h1>
+
+    <div class="container">
+        <div class="sidebar">
+            <button onclick="filtrarPorEstado('Ingresado')">Ingresados</button>
+            <button onclick="filtrarPorEstado('En Proceso')">En Proceso</button>
+            <button onclick="filtrarPorEstado('Finalizado')">Finalizados</button>
+            <button onclick="mostrarTodos()">Mostrar Todos</button>
+            </div>
+
+        <div class="table-container">
+            <table id="datosCanjeTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Fecha Ingreso</th>
+                        <th>Estado</th>
+                        <th>DNI</th>
+                        <th>Apellido</th>
+                        <th>Nombre</th>
+                        <th>Psicofísico Apellido</th>
+                        <th>Psicofísico Nombre</th>
+                        <th>Psicofísico Categoría</th>
+                        <th>Psicofísico F. Examen</th>
+                        <th>Psicofísico F. Dictamen</th>
+                        <th>Psicofísico DNI</th>
+                        <th>Psicofísico Imagen</th>
+                        <th>Curso Nombre</th>
+                        <th>Curso Apellido</th>
+                        <th>Curso DNI</th>
+                        <th>Curso Imagen</th>
+                        <th>Legalidad Nombre</th>
+                        <th>Legalidad Apellido</th>
+                        <th>Legalidad DNI</th>
+                        <th>Legalidad Imagen</th>
+                        <th>Provincia</th>
+                        <th>Municipio</th>
+                        <th>Ciudadano Presencial</th>
+                        <th>Frente DNI Imagen</th>
+                        <th>Dorso DNI Imagen</th>
+                        <th>Licencia Frente Imagen</th>
+                        <th>Licencia Dorso Imagen</th>
+                        <th>LINTI Imagen</th>
+                        <th>Curso Certificado Imagen</th>
+                        <th>Psicofísico Certificado Imagen</th>
+                        <th>Legalidad Certificado Imagen</th>
+                        </tr>
+                </thead>
+                <tbody id="datosCanjeBody">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function cargarDatos() {
+            fetch('/canje/obtener_datos_canje') // Reemplaza con la ruta correcta de tu API
+                .then(response => response.json())
+                .then(data => mostrarDatos(data))
+                .catch(error => console.error('Error al cargar los datos:', error));
+        }
+
+        function mostrarDatos(data) {
+            const tbody = document.getElementById('datosCanjeBody');
+            tbody.innerHTML = ''; // Limpiar la tabla antes de agregar nuevos datos
+
+            data.forEach(row => {
+                const tr = tbody.insertRow();
+                tr.insertCell().textContent = row[0];  // ID
+                tr.insertCell().textContent = row[1];  // Fecha Ingreso
+                tr.insertCell().textContent = row[2];  // Estado
+                tr.insertCell().textContent = row[3];  // DNI
+                tr.insertCell().textContent = row[4];  // Apellido
+                tr.insertCell().textContent = row[5];  // Nombre
+                tr.insertCell().textContent = row[6];  // Psicofísico Apellido
+                tr.insertCell().textContent = row[7];  // Psicofísico Nombre
+                tr.insertCell().textContent = row[8];  // Psicofísico Categoría
+                tr.insertCell().textContent = row[9];  // Psicofísico F. Examen
+                tr.insertCell().textContent = row[10]; // Psicofísico F. Dictamen
+                tr.insertCell().textContent = row[11]; // Psicofísico DNI
+                tr.insertCell().textContent = row[12]; // Psicofísico Imagen
+                tr.insertCell().textContent = row[13]; // Curso Nombre
+                tr.insertCell().textContent = row[14]; // Curso Apellido
+                tr.insertCell().textContent = row[15]; // Curso DNI
+                tr.insertCell().textContent = row[16]; // Curso Imagen
+                tr.insertCell().textContent = row[17]; // Legalidad Nombre
+                tr.insertCell().textContent = row[18]; // Legalidad Apellido
+                tr.insertCell().textContent = row[19]; // Legalidad DNI
+                tr.insertCell().textContent = row[20]; // Legalidad Imagen
+                tr.insertCell().textContent = row[21]; // Provincia
+                tr.insertCell().textContent = row[22]; // Municipio
+                tr.insertCell().textContent = row[23]; // Ciudadano Presencial
+                tr.insertCell().textContent = row[24]; // Frente DNI Imagen
+                tr.insertCell().textContent = row[25]; // Dorso DNI Imagen
+                tr.insertCell().textContent = row[26]; // Licencia Frente Imagen
+                tr.insertCell().textContent = row[27]; // Licencia Dorso Imagen
+                tr.insertCell().textContent = row[28]; // LINTI Imagen
+                tr.insertCell().textContent = row[29]; // Curso Certificado Imagen
+                tr.insertCell().textContent = row[30]; // Psicofísico Certificado Imagen
+                tr.insertCell().textContent = row[31]; // Legalidad Certificado Imagen
+                // Agrega más celdas según tus columnas
+            });
+        }
+
+        function filtrarPorEstado(estado) {
+            fetch(`/canje/obtener_datos_canje?estado=${estado}`) // Envía el estado como parámetro
+                .then(response => response.json())
+                .then(data => mostrarDatos(data))
+                .catch(error => console.error('Error al filtrar los datos:', error));
+        }
+
+        function mostrarTodos() {
+            cargarDatos();
+        }
+
+        // Cargar los datos iniciales al cargar la página
+        cargarDatos();
+    </script>
+</body>
+</html>
