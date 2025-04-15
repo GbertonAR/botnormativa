@@ -377,13 +377,13 @@
             }
 
             try {
-                <!-- const response = await fetch('/canje/upload', {
+                const response = await fetch('/canje/upload', {
                     method: 'POST',
                     body: formData
                 });
                 const data = await response.json();
                 console.log('Respuesta del servidor:', data);
-                datosDocumentos[documentType] = data; -->
+                datosDocumentos[documentType] = data; 
 
                 fetch('/canje/upload', {
                     method: 'POST',
