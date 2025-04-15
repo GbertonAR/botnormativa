@@ -1,10 +1,20 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, Blueprint, send_file
 import sqlite3
 import re
 import os
 import google.generativeai as genai
+from fpdf import FPDF
+import io
+
+# *** INSTRUCCIÓN IMPORTANTE: IMPORTA EL BLUEPRINT DE "CANJE" ***
+from canje.app_canje import canje_bp
+
 
 app = Flask(__name__)
+
+# *** INSTRUCCIÓN IMPORTANTE: REGISTRA EL BLUEPRINT DE "CANJE" EN LA APLICACIÓN PRINCIPAL ***
+app.register_blueprint(canje_bp)
+
 
 # Configurar API Key de Gemini
 genai.configure(api_key="AIzaSyALSGwm8GtQNIyiofZJ0fBZf2jvAbpz_vo")
@@ -18,6 +28,13 @@ DB_PATH =("normativas.db")
 #DB_PATH =("wwwroot/normativas.db")
 #DB_PATH =("site/wwwroot/normativas.db")
 print(f"Este es el valor de DB", DB_PATH)
+
+# Importa el Blueprint
+#from .pdf_generation import pdf_bp
+
+# Registra el Blueprint en la aplicación
+#app.register_blueprint(pdf_bp)
+
 
 # 🔍 Función para extraer número de normativa desde la pregunta
 def extraer_numero_normativa(pregunta):
@@ -65,6 +82,9 @@ def obtener_normativa(numero=None, consulta=None):
     if resultado:
         #return [row[0] for row in resultado]
         return resultado
+    else:
+        print("No se encontraron resultados.")
+        return None
         
     #return None
 
@@ -155,6 +175,27 @@ def api_consulta():
     #     #return jsonify({"respuestas": respuestas})
     # else:
     #     return jsonify({"mensaje": "No se encontraron normativas para la consulta."}), 404
+# @pdf_bp.route('/generar', methods=['POST'])
+# def generar_pdf():
+#     respuesta = request.form.get('respuesta')
+#     if not respuesta:
+#         return "Error: No se proporcionó la respuesta.", 400
+
+#     pdf = FPDF()
+#     pdf.add_page()
+#     pdf.set_font("Arial", size=12)
+#     pdf.multi_cell(0, 10, txt=respuesta)
+
+#     # Guardar el PDF en un buffer de memoria
+#     buffer = io.BytesIO()
+#     pdf.output(buffer)
+#     buffer.seek(0)
+
+#     return send_file(buffer, download_name='respuesta_normativa.pdf', as_attachment=True)
+
+# En tu app.py principal, registra el Blueprint:
+# from .pdf_generation import pdf_bp
+# app.register_blueprint(pdf_bp)
 
 if __name__ == '__main__':
     #app.run(debug=True, port=5000)
