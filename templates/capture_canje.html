@@ -377,13 +377,24 @@
             }
 
             try {
-                const response = await fetch('/canje/upload', {
+                <!-- const response = await fetch('/canje/upload', {
                     method: 'POST',
                     body: formData
                 });
                 const data = await response.json();
                 console.log('Respuesta del servidor:', data);
-                datosDocumentos[documentType] = data;
+                datosDocumentos[documentType] = data; -->
+
+                fetch('/canje/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Respuesta del servidor:', data);
+                    datosDocumentos[documentType] = data; // Almacenar los datos recibidos
+
+
 
                 if (documentType === 'dorso_dni') {
                     const infoDiv = document.getElementById('dorso_dni_info');
@@ -403,12 +414,20 @@
                 } else {
                     console.log(`Datos para ${documentType}:`, data);
                 }
+            })
+                .catch(error => {
+                    console.error('Error al subir la imagen capturada:', error);
+                    alert('Error al subir la imagen capturada.');
+                    const infoDiv = document.getElementById('dorso_dni_info');
+                    infoDiv.style.display = 'none';
+                });
             } catch (error) {
                 console.error('Error al subir la imagen capturada:', error);
                 alert('Error al subir la imagen capturada.');
                 const infoDiv = document.getElementById('dorso_dni_info');
                 infoDiv.style.display = 'none';
             }
+
         }
 
         function dataURLtoBlob(dataurl) {
@@ -422,7 +441,7 @@
             }
             return new Blob([u8arr], { type: mime });
         }
-        
+
         procesarButton.addEventListener('click', function() {
             console.log('Datos de los documentos:', datosDocumentos);
             // ... (tu lógica de validación y procesamiento existente) ...
