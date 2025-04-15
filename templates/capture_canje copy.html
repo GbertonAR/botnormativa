@@ -1,205 +1,30 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Captura de Documentos para Canje</title>
+    <title>Proceso de Canje - Captura de Imagen</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/canje.css') }}">
     <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            margin: 20px;
-            background-color: #f4f4f4;
-            color: #333;
-        }
-
-        h1 {
-            color: #007bff;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        nav {
-            background-color: #333;
-            padding: 10px 0;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        nav a {
-            color: white;
-            text-decoration: none;
-            padding: 10px 20px;
-            margin: 0 10px;
-            border-radius: 5px;
-            transition: background-color 0.3s ease;
-        }
-
-        nav a:hover {
-            background-color: #555;
-        }
-
-        .dropdown {
-            display: inline-block;
-            position: relative;
-        }
-
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            background-color: #f9f9f9;
-            min-width: 160px;
-            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-            z-index: 1;
-            border-radius: 5px;
-            text-align: left;
-        }
-
-        .dropdown-content a {
-            color: black;
-            padding: 12px 16px;
-            text-decoration: none;
-            display: block;
-            margin: 0;
-        }
-
-        .dropdown-content a:hover {
-            background-color: #ddd;
-        }
-
-        .dropdown:hover .dropdown-content {
-            display: block;
-        }
-
-        .menu-horizontal {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
-            justify-content: center;
-        }
-
-        .capture-button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            cursor: pointer;
-            border-radius: 8px;
-            font-size: 1em;
-            transition: background-color 0.3s ease;
-            box-shadow: 2px 2px 5px #888888;
-        }
-
-        .capture-button:hover {
-            background-color: #0056b3;
-        }
-
-        .container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            justify-content: center;
-        }
-
-        .preview-container {
-            background-color: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 3px 3px 10px #aaa;
-            text-align: center;
-        }
-
-        .preview-container strong {
-            display: block;
-            margin-bottom: 10px;
-            color: #555;
-        }
-
+        /* ... (tus estilos CSS existentes) ... */
         #camera-preview {
             width: 100%;
             max-width: 400px;
             border: 1px solid #ccc;
-            margin-bottom: 15px;
-            border-radius: 5px;
+            margin-bottom: 10px;
         }
-
-        #capture-image {
-            background-color: #28a745;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            cursor: pointer;
-            border-radius: 8px;
-            font-size: 1em;
-            transition: background-color 0.3s ease;
-            box-shadow: 2px 2px 5px #888888;
-        }
-
-        #capture-image:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-            box-shadow: none;
-        }
-
-        .preview {
-            border: 1px dashed #bbb;
-            border-radius: 5px;
-            max-width: 100%;
-            height: auto; /* Mantener la proporción */
-            display: block;
-            margin: 0 auto 10px;
-        }
-
-        .document-info {
-            margin-top: 10px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            background-color: #f9f9f9;
-            text-align: left;
-        }
-
-        .document-info p {
-            margin: 5px 0;
-        }
-
-        .scan-button.verde {
-            background-color: #28a745 !important;
-            color: white !important;
-            box-shadow: 2px 2px 5px #5cb85c;
-        }
-
-        #procesarDocumentos {
+        .capture-button {
             background-color: #007bff;
             color: white;
             border: none;
-            padding: 15px 30px;
+            padding: 10px 15px;
+            margin-bottom: 10px;
             cursor: pointer;
-            border-radius: 8px;
-            font-size: 1.2em;
-            transition: background-color 0.3s ease;
-            box-shadow: 3px 3px 8px #888888;
-            margin-top: 20px;
-            display: block;
-            width: fit-content;
-            margin-left: auto;
-            margin-right: auto;
+            border-radius: 5px;
+            font-size: 1em;
         }
-
-        #procesarDocumentos:hover {
-            background-color: #0056b3;
-        }
-
-        /* Estilos específicos para la cámara trasera */
-        /* Puedes agregar estilos aquí si necesitas algo particular */
     </style>
-
 </head>
 <body>
- 
-    <h1>Captura de Documentos para Canje</h1>
+    <h1>Proceso de Canje de Documentación</h1>
     <nav>
         <a href="/">Inicio</a>
         <a href="{{ url_for('canje.capture_canje_form') }}">Captura Canje</a>
@@ -213,14 +38,14 @@
         <a href="#">Contacto</a>
     </nav>
     <div class="menu-horizontal">
-        <button id="frente_dni_button" class="capture-button" onclick="startCapture('frente_dni')">Frente DNI</button>
-        <button id="dorso_dni_button" class="capture-button" onclick="startCapture('dorso_dni')">Dorso DNI</button>
-        <button id="licencia_municipal_frente_button" class="capture-button">Lic. Mun. Frente</button>
-        <button id="licencia_municipal_dorso_button" class="capture-button">Lic. Mun. Dorso</button>
-        <button id="psicofisico_button" class="capture-button">Psicofisico</button>
-        <button id="certificado_curso_button" class="capture-button">Cert. Curso</button>
-        <button id="licencia_linti_button" class="capture-button">Licencia Linti</button>
-        <button id="certificado_legalidad_button" class="capture-button">Cert. Legalidad</button>
+        <button id="frente_dni_button" class="capture-button" onclick="startCapture('frente_dni')">Capturar Frente DNI</button>
+        <button id="dorso_dni_button" class="capture-button" onclick="startCapture('dorso_dni')">Capturar Dorso DNI</button>
+        <button id="licencia_municipal_frente_button" class="capture-button" onclick="startCapture('licencia_municipal_frente')">Capturar Lic. Municipal Frente</button>
+        <button id="licencia_municipal_dorso_button" class="capture-button" onclick="startCapture('licencia_municipal_dorso')">Capturar Lic. Municipal Dorso</button>
+        <button id="psicofisico_button" class="capture-button" onclick="startCapture('psicofisico')">Capturar Psicofisico</button>
+        <button id="certificado_curso_button" class="capture-button" onclick="startCapture('certificado_curso')">Capturar Certificado Curso</button>
+        <button id="licencia_linti_button" class="capture-button" onclick="startCapture('licencia_linti')">Capturar Licencia Linti</button>
+        <button id="certificado_legalidad_button" class="capture-button" onclick="startCapture('certificado_legalidad')">Capturar Certificado Legalidad</button>
     </div>
 
     <div class="container">
@@ -236,6 +61,9 @@
         <div class="preview-container">
             <strong>Dorso DNI</strong>
             <canvas id="preview_dorso_dni" class="preview" width="300" height="200"></canvas>
+        </div>
+        <div class="preview-container">
+            <strong>Datos DNI</strong>
             <div id="dorso_dni_info" class="document-info" style="display: none;">
                 <p><strong>Nombre:</strong> <span id="nombre_leido"></span></p>
                 <p><strong>Apellidos:</strong> <span id="apellidos_leido"></span></p>
@@ -266,7 +94,7 @@
             <strong>Certificado Legalidad</strong>
             <canvas id="preview_certificado_legalidad" class="preview" width="300" height="200"></canvas>
         </div>
-        <button type="button" id="procesarDocumentos">Procesar Documentos</button>
+        <button type="button" onclick="procesarDocumentos()">Procesar Documentos</button>
     </div>
 
     <script>
@@ -274,26 +102,16 @@
         let currentDocumentType = null;
         const cameraPreview = document.getElementById('camera-preview');
         const captureButton = document.getElementById('capture-image');
-        const procesarButton = document.getElementById('procesarDocumentos');
         let mediaStream = null;
 
         async function startCamera() {
             try {
-        
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                const rearCamera = devices.find(device => device.kind === 'videoinput' && device.label.toLowerCase().includes('back'));
-
-                const constraints = {
-                    video: rearCamera ? { deviceId: rearCamera.deviceId } : true,
-                    audio: false
-                };
-              
-                mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+                mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
                 cameraPreview.srcObject = mediaStream;
                 captureButton.disabled = false;
             } catch (error) {
                 console.error('Error accessing camera:', error);
-                alert('No se pudo acceder a la cámara trasera.');
+                alert('No se pudo acceder a la cámara.');
             }
         }
 
@@ -333,7 +151,7 @@
             const previewElement = document.getElementById(`preview_${documentType}`);
             const buttonElement = document.getElementById(`${documentType}_button`);
             if (buttonElement) {
-                buttonElement.className = 'capture-button scan-button verde';
+                buttonElement.className = 'scan-button verde';
             }
 
             try {
@@ -383,15 +201,10 @@
             return new Blob([u8arr], { type: mime });
         }
 
-        procesarButton.addEventListener('click', function() {
+        function procesarDocumentos() {
             console.log('Datos de los documentos:', datosDocumentos);
             // ... (tu lógica de validación y procesamiento existente) ...
-            alert('Documentos procesados (simulado).'); // Simulación de procesamiento
-        });
-
-        // Iniciar la cámara al cargar la página (opcional, se puede iniciar solo al hacer clic en un botón)
-        // startCamera();
+        }
     </script>
-  
 </body>
 </html>
