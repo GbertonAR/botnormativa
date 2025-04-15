@@ -1,7 +1,7 @@
 import os
 import re
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for
-from PIL import Image
+from PIL import Image, ImageEnhance
 import pytesseract
 from passporteye import read_mrz
 #from passporteye.mrz.mrz import MRZ
@@ -40,34 +40,71 @@ def extract_text_from_image(image_path):
         print(f"Error al realizar OCR: {e}")
         return None
 
+# def extract_dni_data(image_path):
+#     """
+#     Intenta leer la información del MRZ del dorso del DNI utilizando la biblioteca passporteye.
+#     """
+#     try:
+#         img = Image.open(image_path)
+#         mrz_data = read_mrz(image_path)
+
+#         print(f"Datos MRZ brutos (passporteye): {mrz_data}")
+#         print(f"¿MRZ Válido? (passporteye): {mrz_data.valid}")
+#         print(f"Campos MRZ (passporteye): {mrz_data.__dict__}")
+
+#         if mrz_data:
+#             nombre = mrz_data.names
+#             apellidos = mrz_data.surname
+#             numero_documento = mrz_data.number.rstrip('<')  # Eliminar caracteres '<' al final
+#             print(f"Nombre extraído: {nombre}")
+#             print(f"Apellidos extraídos: {apellidos}")
+#             print(f"Número de Documento extraído: {numero_documento}")
+#             return nombre, apellidos, numero_documento
+#         else:
+#             print("passporteye no detectó ningún MRZ.")
+#             return None, None, None
+
+#     except Exception as e:
+#         print(f"Error al leer el MRZ con passporteye: {e}")
+#         return None, None, None
+
+
+
 def extract_dni_data(image_path):
-    """
-    Intenta leer la información del MRZ del dorso del DNI utilizando la biblioteca passporteye.
-    """
     try:
-        img = Image.open(image_path)
-        mrz_data = read_mrz(image_path)
+        img = Image.open(image_path).convert('L')  # Convertir a escala de grises
+
+        # Mejora del contraste
+        enhancer = ImageEnhance.Contrast(img)
+        img = enhancer.enhance(1.5)
+
+        # Mejora de la nitidez (opcional)
+        enhancer_sharpness = ImageEnhance.Sharpness(img)
+        img = enhancer_sharpness.enhance(2.0)
+
+        # Pasar la imagen preprocesada a passporteye
+        mrz_data = read_mrz(img) # ¡Pasa el objeto Image, no la ruta!
 
         print(f"Datos MRZ brutos (passporteye): {mrz_data}")
         print(f"¿MRZ Válido? (passporteye): {mrz_data.valid}")
         print(f"Campos MRZ (passporteye): {mrz_data.__dict__}")
 
-        if mrz_data:
+        if mrz_data and mrz_data.valid: # Asegúrate de que se detectó un MRZ válido
             nombre = mrz_data.names
             apellidos = mrz_data.surname
-            numero_documento = mrz_data.number.rstrip('<')  # Eliminar caracteres '<' al final
+            numero_documento = mrz_data.number.rstrip('<')
             print(f"Nombre extraído: {nombre}")
             print(f"Apellidos extraídos: {apellidos}")
             print(f"Número de Documento extraído: {numero_documento}")
             return nombre, apellidos, numero_documento
         else:
-            print("passporteye no detectó ningún MRZ.")
+            print("passporteye no detectó un MRZ válido.")
             return None, None, None
 
     except Exception as e:
         print(f"Error al leer el MRZ con passporteye: {e}")
         return None, None, None
-
+    
 @canje_bp.route('/', methods=['GET'])
 def canje_form():
     return render_template('canje.html')
