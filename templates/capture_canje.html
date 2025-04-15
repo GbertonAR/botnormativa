@@ -123,6 +123,9 @@
             border: 1px solid #ccc;
             margin-bottom: 15px;
             border-radius: 5px;
+            object-fit: contain; /* O 'cover' si prefieres recortar la imagen */
+            height: auto; /* Mantiene la proporción */
+            max-height: 90%; /* Ocupa hasta el 90% de la altura del contenedor */
         }
 
         #capture-image {
@@ -150,6 +153,8 @@
             height: auto; /* Mantener la proporción */
             display: block;
             margin: 0 auto 10px;
+            object-fit: contain; /* O 'cover' */
+            max-height: 90%; /* Ocupa hasta el 90% de la altura del contenedor */
         }
 
         .document-info {
@@ -251,11 +256,11 @@
         </div>
         <div class="preview-container">
             <strong>Frente DNI</strong>
-            <canvas id="preview_frente_dni" class="preview" width="300" height="200"></canvas>
+            <canvas id="preview_frente_dni" class="preview" width="300" height="200" style="object-fit: contain; max-height: 90%;"></canvas>
         </div>
         <div class="preview-container">
             <strong>Dorso DNI</strong>
-            <canvas id="preview_dorso_dni" class="preview" width="300" height="200"></canvas>
+            <canvas id="preview_dorso_dni" class="preview" width="300" height="200" style="object-fit: contain; max-height: 90%;"></canvas>
             <div id="dorso_dni_info" class="document-info" style="display: none;">
                 <p><strong>Nombre:</strong> <span id="nombre_leido"></span></p>
                 <p><strong>Apellidos:</strong> <span id="apellidos_leido"></span></p>
@@ -264,27 +269,27 @@
         </div>
         <div class="preview-container">
             <strong>Licencia Municipal Frente</strong>
-            <canvas id="preview_licencia_municipal_frente" class="preview" width="300" height="200"></canvas>
+            <canvas id="preview_licencia_municipal_frente" class="preview" width="300" height="200" style="object-fit: contain; max-height: 90%;"></canvas>
         </div>
         <div class="preview-container">
             <strong>Licencia Municipal Dorso</strong>
-            <canvas id="preview_licencia_municipal_dorso" class="preview" width="300" height="200"></canvas>
+            <canvas id="preview_licencia_municipal_dorso" class="preview" width="300" height="200" style="object-fit: contain; max-height: 90%;"></canvas>
         </div>
         <div class="preview-container">
             <strong>Psicofisico</strong>
-            <canvas id="preview_psicofisico" class="preview" width="300" height="200"></canvas>
+            <canvas id="preview_psicofisico" class="preview" width="300" height="200" style="object-fit: contain; max-height: 90%;"></canvas>
         </div>
         <div class="preview-container">
             <strong>Certificado Curso</strong>
-            <canvas id="preview_certificado_curso" class="preview" width="300" height="200"></canvas>
+            <canvas id="preview_certificado_curso" class="preview" width="300" height="200" style="object-fit: contain; max-height: 90%;"></canvas>
         </div>
         <div class="preview-container">
             <strong>Licencia Linti</strong>
-            <canvas id="preview_licencia_linti" class="preview" width="300" height="200"></canvas>
+            <canvas id="preview_licencia_linti" class="preview" width="300" height="200" style="object-fit: contain; max-height: 90%;"></canvas>
         </div>
         <div class="preview-container">
             <strong>Certificado Legalidad</strong>
-            <canvas id="preview_certificado_legalidad" class="preview" width="300" height="200"></canvas>
+            <canvas id="preview_certificado_legalidad" class="preview" width="300" height="200" style="object-fit: contain; max-height: 90%;"></canvas>
         </div>
         <button type="button" id="procesarDocumentos">Procesar Documentos</button>
     </div>
@@ -321,6 +326,9 @@
 
                 mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
                 cameraPreview.srcObject = mediaStream;
+                // Aplicar object-fit y max-height al video también
+                cameraPreview.style.objectFit = 'contain'; // O 'cover'
+                cameraPreview.style.maxHeight = '90%';
                 captureButton.disabled = false;
             } catch (error) {
                 console.error('Error accessing camera:', error);
@@ -414,7 +422,7 @@
             }
             return new Blob([u8arr], { type: mime });
         }
-
+        
         procesarButton.addEventListener('click', function() {
             console.log('Datos de los documentos:', datosDocumentos);
             // ... (tu lógica de validación y procesamiento existente) ...
