@@ -367,7 +367,7 @@
 
         async function sendCapturedImage(imageData, documentType) {
             const formData = new FormData();
-            formData.append('document', dataURLtoBlob(imageData), `${documentType}.png`); // Asegúrate que la extensión coincida
+            formData.append('document', dataURLtoBlob(imageData), `${documentType}.png`);
             formData.append('document_type', documentType);
 
             const previewElement = document.getElementById(`preview_${documentType}`);
@@ -383,18 +383,7 @@
                 });
                 const data = await response.json();
                 console.log('Respuesta del servidor:', data);
-                datosDocumentos[documentType] = data; 
-
-                fetch('/canje/upload', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Respuesta del servidor:', data);
-                    datosDocumentos[documentType] = data; // Almacenar los datos recibidos
-
-
+                datosDocumentos[documentType] = data;
 
                 if (documentType === 'dorso_dni') {
                     const infoDiv = document.getElementById('dorso_dni_info');
@@ -414,22 +403,14 @@
                 } else {
                     console.log(`Datos para ${documentType}:`, data);
                 }
-            })
-                .catch(error => {
-                    console.error('Error al subir la imagen capturada:', error);
-                    alert('Error al subir la imagen capturada.');
-                    const infoDiv = document.getElementById('dorso_dni_info');
-                    infoDiv.style.display = 'none';
-                });
             } catch (error) {
                 console.error('Error al subir la imagen capturada:', error);
                 alert('Error al subir la imagen capturada.');
                 const infoDiv = document.getElementById('dorso_dni_info');
                 infoDiv.style.display = 'none';
             }
-
         }
-
+        
         function dataURLtoBlob(dataurl) {
             const arr = dataurl.split(',');
             const mime = arr[0].match(/:(.*?);/)[1];

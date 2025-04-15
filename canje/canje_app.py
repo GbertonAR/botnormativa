@@ -68,7 +68,68 @@ def extract_text_from_image(image_path):
 #         print(f"Error al leer el MRZ con passporteye: {e}")
 #         return None, None, None
 
+@canje_bp.route('/upload_camara', methods=['POST'])
+def upload_document_camara():
+    if 'document' not in request.files:
+        return jsonify({'error': 'No se proporcionó ninguna imagen'}), 400
 
+    document = request.files['document']
+    document_type = request.form.get('document_type')
+
+    if document.filename == '':
+        return jsonify({'error': 'No se seleccionó ninguna imagen'}), 400
+
+    if document:
+        filename = f"camara_{document_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png" # Nombre más descriptivo
+        filepath = os.path.join('temp_uploads', filename)
+        os.makedirs('temp_uploads', exist_ok=True)
+        document.save(filepath)
+
+        if document_type == 'dorso_dni':
+            nombre, apellidos, numero_documento = extract_dni_data_camara(filepath) # Nueva función específica
+            os.remove(filepath)
+            if nombre and apellidos and numero_documento:
+                return jsonify({
+                    'filename': filename,
+                    'document_type': document_type,
+                    'nombre': nombre,
+                    'apellidos': apellidos,
+                    'numero_documento': numero_documento
+                })
+            else:
+                return jsonify({
+                    'filename': filename,
+                    'document_type': document_type,
+                    'error': 'No se pudieron leer los datos del dorso del DNI (cámara).'
+                }), 400
+        else:
+            text = extract_text_from_image_camara(filepath) # Nueva función específica
+            os.remove(filepath)
+            return jsonify({'filename': filename, 'document_type': document_type, 'ocr_text': text})
+
+    return jsonify({'error': 'Error al cargar la imagen de la cámara'}), 500
+
+def extract_dni_data_camara(image_path):
+    """Función específica para extraer datos del DNI desde imágenes de cámara."""
+    # Aquí puedes implementar un preprocesamiento más agresivo
+    # o parámetros de OCR optimizados para imágenes de cámara.
+    # Podrías incluso intentar detectar bordes y corregir la perspectiva.
+    # Luego, llamar a la lógica de lectura del MRZ (posiblemente la misma que extract_dni_data).
+    img = Image.open(image_path)
+    # Ejemplo de preprocesamiento adicional para imágenes de cámara
+    enhancer = ImageEnhance.Contrast(img)
+    img = enhancer.enhance(1.8)
+    # ... otros preprocesamientos ...
+    mrz_data = read_mrz(img)
+    # ... (lógica de extracción similar a extract_dni_data) ...
+    if mrz_data and mrz_data.valid:
+        return mrz_data.names, mrz_data.surname, mrz_data.number.rstrip('<')
+    return None, None, None
+
+def extract_text_from_image_camara(image_path):
+    """Función específica para OCR de otros documentos desde imágenes de cámara."""
+    # Implementación similar a extract_text_from_image con posibles optimizaciones
+    return extract_text_from_image(image_path) # O una versión modificada
 
 def extract_dni_data(image_path):
     try:
