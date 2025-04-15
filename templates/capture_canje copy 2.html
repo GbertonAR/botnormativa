@@ -192,30 +192,13 @@
             background-color: #0056b3;
         }
 
-        /* Estilos para el marco de guía */
-        .camera-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none; /* Permite que los clics pasen al video */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .guideline {
-            border: 2px dashed rgba(255, 255, 0, 0.7); /* Marco amarillo semi-transparente */
-            width: 80%;
-            height: 60%;
-            border-radius: 10px;
-        }
+        /* Estilos específicos para la cámara trasera */
+        /* Puedes agregar estilos aquí si necesitas algo particular */
     </style>
 
 </head>
 <body>
-
+ 
     <h1>Captura de Documentos para Canje</h1>
     <nav>
         <a href="/">Inicio</a>
@@ -241,12 +224,9 @@
     </div>
 
     <div class="container">
-        <div class="preview-container" style="position: relative;">
+        <div class="preview-container">
             <strong>Vista Previa Cámara</strong>
-            <video id="camera-preview" autoplay playsinline style="display: block;"></video>
-            <div class="camera-overlay">
-                <div class="guideline"></div>
-            </div>
+            <video id="camera-preview" autoplay playsinline></video>
             <button id="capture-image" disabled>Capturar Imagen</button>
         </div>
         <div class="preview-container">
@@ -299,33 +279,21 @@
 
         async function startCamera() {
             try {
-
+        
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const rearCamera = devices.find(device => device.kind === 'videoinput' && device.label.toLowerCase().includes('back'));
 
                 const constraints = {
-                    video: rearCamera ? {
-                        deviceId: rearCamera.deviceId,
-                        width: { ideal: 1280 }, // Intenta obtener una resolución mayor
-                        height: { ideal: 720 },
-                        focusMode: 'continuous' // Intenta activar el enfoque continuo
-                        // Puedes intentar agregar zoom si es soportado:
-                        // zoom: { ideal: 1.5 }
-                    } : {
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 },
-                        focusMode: 'continuous'
-                    },
+                    video: rearCamera ? { deviceId: rearCamera.deviceId } : true,
                     audio: false
                 };
-
+              
                 mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
                 cameraPreview.srcObject = mediaStream;
                 captureButton.disabled = false;
             } catch (error) {
                 console.error('Error accessing camera:', error);
-                alert('No se pudo acceder a la cámara trasera o no se admiten las configuraciones.');
-                // Considera mostrar un mensaje más informativo sobre el error específico
+                alert('No se pudo acceder a la cámara trasera.');
             }
         }
 
@@ -350,7 +318,7 @@
                 canvas.height = cameraPreview.videoHeight;
                 context.drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
                 stopCamera();
-                sendCapturedImage(canvas.toDataURL('image/png'), currentDocumentType); // Cambiado a image/png
+                sendCapturedImage(canvas.toDataURL('image/jpeg'), currentDocumentType);
                 currentDocumentType = null;
             } else {
                 alert('Por favor, inicia la captura de un documento primero.');
@@ -359,7 +327,7 @@
 
         async function sendCapturedImage(imageData, documentType) {
             const formData = new FormData();
-            formData.append('document', dataURLtoBlob(imageData), `${documentType}.png`); // Asegúrate que la extensión coincida
+            formData.append('document', dataURLtoBlob(imageData), `${documentType}.jpeg`);
             formData.append('document_type', documentType);
 
             const previewElement = document.getElementById(`preview_${documentType}`);
@@ -418,12 +386,12 @@
         procesarButton.addEventListener('click', function() {
             console.log('Datos de los documentos:', datosDocumentos);
             // ... (tu lógica de validación y procesamiento existente) ...
-            alert('Documentos  procesados (simulado).'); // Simulación de procesamiento
+            alert('Documentos procesados (simulado).'); // Simulación de procesamiento
         });
 
         // Iniciar la cámara al cargar la página (opcional, se puede iniciar solo al hacer clic en un botón)
         // startCamera();
     </script>
-
+  
 </body>
 </html>
