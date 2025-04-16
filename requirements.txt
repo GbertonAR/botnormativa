@@ -1,6 +1,8 @@
 annotated-types==0.7.0
 anyio==4.9.0
+azure-ai-documentintelligence==1.0.2
 azure-ai-textanalytics==5.3.0
+azure-cognitiveservices-vision-computervision==0.9.1
 azure-common==1.1.28
 azure-core==1.32.0
 beautifulsoup4==4.13.3
@@ -57,10 +59,12 @@ markdown-it-py==3.0.0
 MarkupSafe==3.0.2
 matplotlib==3.10.1
 mdurl==0.1.2
+msrest==0.7.1
 murmurhash==1.0.12
 networkx==3.4.2
 nltk==3.9.1
 numpy==2.2.4
+oauthlib==3.2.2
 openai==1.68.0
 packaging==24.2
 pandas==2.2.3
@@ -90,6 +94,7 @@ pytz==2025.1
 qrcode==8.1
 regex==2024.11.6
 requests==2.32.3
+requests-oauthlib==2.0.0
 rich==13.9.4
 rsa==4.9
 scikit-image==0.25.2
