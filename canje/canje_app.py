@@ -3,7 +3,7 @@ import re
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for
 from PIL import Image, ImageEnhance
 # import pytesseract  <-- ELIMINADO
-# from passporteye import read_mrz  <-- ELIMINADO
+from passporteye import read_mrz  
 
 # Importa tu conexión a la base de datos y modelos si los tienes
 from .canje_modelos import Provincia, Municipio, Canje
@@ -84,6 +84,7 @@ def extract_text_from_image_azure(image_path):
         logging.error(f"Error al realizar OCR con Azure Computer Vision: {e}")
         return None
 
+
 # *** FUNCIÓN DE EXTRACCIÓN DE DATOS DEL DNI CON AZURE DOCUMENT INTELLIGENCE ***
 def extract_dni_data_azure(image_bytes):
     if not document_intelligence_client:
@@ -114,6 +115,18 @@ def extract_dni_data_azure(image_bytes):
         logging.error(f"Error al analizar el DNI con Azure Document Intelligence: {e}")
         return None, None, None
 
+def extract_mrz_data(image_path):
+    try:
+        results = read_mrz(image_path)
+        if results:
+            mrz_data = results[0] # Suponiendo que solo hay un MRZ en la imagen
+            return mrz_data.to_dict()
+        else:
+            return None
+    except Exception as e:
+        print(f"Error al leer el MRZ: {e}")
+        return None
+
 @canje_bp.route('/upload', methods=['POST'])
 def upload_document():
     if 'document' not in request.files:
@@ -132,24 +145,36 @@ def upload_document():
 
         try:
             if document_type == 'dorso_dni':
-                # Leer el contenido del archivo en memoria y pasarlo como bytes
-                with open(filepath, "rb") as f:
-                    image_bytes = f.read()
-                nombre, apellidos, numero_documento = extract_dni_data_azure(image_bytes)
-                if nombre and apellidos and numero_documento:
+                filepath = os.path.join(TEMP_UPLOAD_FOLDER, filename)
+                document.save(filepath)
+
+                mrz_data = extract_mrz_data(filepath)
+                if mrz_data:
                     return jsonify({
                         'filename': filename,
                         'document_type': document_type,
-                        'nombre': nombre,
-                        'apellidos': apellidos,
-                        'numero_documento': numero_documento
+                        'mrz_data': mrz_data
                     })
                 else:
-                    return jsonify({
-                        'filename': filename,
-                        'document_type': document_type,
-                        'error': 'No se pudieron leer los datos del dorso del DNI (Azure).'
-                    }), 400
+                    # Si no se pudo leer el MRZ, podrías intentar el enfoque de Azure (si quieres)
+                    with open(filepath, "rb") as f:
+                        image_bytes = f.read()
+                    nombre, apellidos, numero_documento = extract_dni_data_azure(image_bytes)
+                    if nombre and apellidos and numero_documento:
+                        return jsonify({
+                            'filename': filename,
+                            'document_type': document_type,
+                            'nombre': nombre,
+                            'apellidos': apellidos,
+                            'numero_documento': numero_documento,
+                            'mrz_read_attempt': 'failed'
+                        })
+                    else:
+                        return jsonify({
+                            'filename': filename,
+                            'document_type': document_type,
+                            'error': 'No se pudieron leer los datos del dorso del DNI (MRZ y Azure).'
+                        }), 400
             else:
                 ocr_text = extract_text_from_image_azure(filepath)
                 return jsonify({'filename': filename, 'document_type': document_type, 'ocr_text': ocr_text})
