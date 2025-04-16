@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Captura de Documentos para Canje</title>
@@ -122,9 +123,9 @@
             border: 1px solid #ccc;
             margin-bottom: 15px;
             border-radius: 5px;
-            object-fit: contain;
-            height: auto;
-            max-height: 90%;
+            object-fit: contain; /* O 'cover' si prefieres recortar la imagen */
+            height: auto; /* Mantiene la proporción */
+            max-height: 90%; /* Ocupa hasta el 90% de la altura del contenedor */
         }
 
         #capture-image {
@@ -149,11 +150,11 @@
             border: 1px dashed #bbb;
             border-radius: 5px;
             max-width: 100%;
-            height: auto;
+            height: auto; /* Mantener la proporción */
             display: block;
             margin: 0 auto 10px;
-            object-fit: contain;
-            max-height: 90%;
+            object-fit: contain; /* O 'cover' */
+            max-height: 90%; /* Ocupa hasta el 90% de la altura del contenedor */
         }
 
         .document-info {
@@ -196,25 +197,27 @@
             background-color: #0056b3;
         }
 
+        /* Estilos para el marco de guía */
         .camera-overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: none;
+            pointer-events: none; /* Permite que los clics pasen al video */
             display: flex;
             justify-content: center;
             align-items: center;
         }
 
         .guideline {
-            border: 2px dashed rgba(255, 255, 0, 0.7);
+            border: 2px dashed rgba(255, 255, 0, 0.7); /* Marco amarillo semi-transparente */
             width: 80%;
             height: 60%;
             border-radius: 10px;
         }
     </style>
+
 </head>
 <body>
 
@@ -234,12 +237,12 @@
     <div class="menu-horizontal">
         <button id="frente_dni_button" class="capture-button" onclick="startCapture('frente_dni')">Frente DNI</button>
         <button id="dorso_dni_button" class="capture-button" onclick="startCapture('dorso_dni')">Dorso DNI</button>
-        <button id="licencia_municipal_frente_button" class="capture-button" onclick="startCapture('licencia_municipal_frente')">Lic. Mun. Frente</button>
-        <button id="licencia_municipal_dorso_button" class="capture-button" onclick="startCapture('licencia_municipal_dorso')">Lic. Mun. Dorso</button>
-        <button id="psicofisico_button" class="capture-button" onclick="startCapture('psicofisico')">Psicofisico</button>
-        <button id="certificado_curso_button" class="capture-button" onclick="startCapture('certificado_curso')">Cert. Curso</button>
-        <button id="licencia_linti_button" class="capture-button" onclick="startCapture('licencia_linti')">Licencia Linti</button>
-        <button id="certificado_legalidad_button" class="capture-button" onclick="startCapture('certificado_legalidad')">Cert. Legalidad</button>
+        <button id="licencia_municipal_frente_button" class="capture-button">Lic. Mun. Frente</button>
+        <button id="licencia_municipal_dorso_button" class="capture-button">Lic. Mun. Dorso</button>
+        <button id="psicofisico_button" class="capture-button">Psicofisico</button>
+        <button id="certificado_curso_button" class="capture-button">Cert. Curso</button>
+        <button id="licencia_linti_button" class="capture-button">Licencia Linti</button>
+        <button id="certificado_legalidad_button" class="capture-button">Cert. Legalidad</button>
     </div>
 
     <div class="container">
@@ -298,18 +301,21 @@
         const captureButton = document.getElementById('capture-image');
         const procesarButton = document.getElementById('procesarDocumentos');
         let mediaStream = null;
-    
+
         async function startCamera() {
             try {
+
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const rearCamera = devices.find(device => device.kind === 'videoinput' && device.label.toLowerCase().includes('back'));
-    
+
                 const constraints = {
                     video: rearCamera ? {
                         deviceId: rearCamera.deviceId,
-                        width: { ideal: 1280 },
+                        width: { ideal: 1280 }, // Intenta obtener una resolución mayor
                         height: { ideal: 720 },
-                        focusMode: 'continuous'
+                        focusMode: 'continuous' // Intenta activar el enfoque continuo
+                        // Puedes intentar agregar zoom si es soportado:
+                        // zoom: { ideal: 1.5 }
                     } : {
                         width: { ideal: 1280 },
                         height: { ideal: 720 },
@@ -317,18 +323,20 @@
                     },
                     audio: false
                 };
-    
+
                 mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
                 cameraPreview.srcObject = mediaStream;
-                cameraPreview.style.objectFit = 'contain';
+                // Aplicar object-fit y max-height al video también
+                cameraPreview.style.objectFit = 'contain'; // O 'cover'
                 cameraPreview.style.maxHeight = '90%';
                 captureButton.disabled = false;
             } catch (error) {
                 console.error('Error accessing camera:', error);
                 alert('No se pudo acceder a la cámara trasera o no se admiten las configuraciones.');
+                // Considera mostrar un mensaje más informativo sobre el error específico
             }
         }
-    
+
         function stopCamera() {
             if (mediaStream) {
                 mediaStream.getTracks().forEach(track => track.stop());
@@ -336,12 +344,12 @@
                 captureButton.disabled = true;
             }
         }
-    
+
         function startCapture(documentType) {
             currentDocumentType = documentType;
             startCamera();
         }
-    
+
         captureButton.addEventListener('click', function() {
             if (currentDocumentType && mediaStream) {
                 const canvas = document.getElementById(`preview_${currentDocumentType}`);
@@ -350,38 +358,39 @@
                 canvas.height = cameraPreview.videoHeight;
                 context.drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
                 stopCamera();
-                sendCapturedImage(canvas.toDataURL('image/png'), currentDocumentType);
+                sendCapturedImage(canvas.toDataURL('image/png'), currentDocumentType); // Cambiado a image/png
                 currentDocumentType = null;
             } else {
                 alert('Por favor, inicia la captura de un documento primero.');
             }
         });
-    
+
         async function sendCapturedImage(imageData, documentType) {
             const formData = new FormData();
             formData.append('document', dataURLtoBlob(imageData), `${documentType}.png`);
             formData.append('document_type', documentType);
-    
+
+            const previewElement = document.getElementById(`preview_${documentType}`);
             const buttonElement = document.getElementById(`${documentType}_button`);
             if (buttonElement) {
                 buttonElement.className = 'capture-button scan-button verde';
             }
-    
+
             try {
-                const response = await fetch('/canje/upload', { // Asegúrate de que esta ruta sea correcta en tu backend
+                const response = await fetch('/canje/upload', {
                     method: 'POST',
                     body: formData
                 });
                 const data = await response.json();
                 console.log('Respuesta del servidor:', data);
                 datosDocumentos[documentType] = data;
-    
+
                 if (documentType === 'dorso_dni') {
                     const infoDiv = document.getElementById('dorso_dni_info');
                     const nombreSpan = document.getElementById('nombre_leido');
                     const apellidosSpan = document.getElementById('apellidos_leido');
                     const numeroSpan = document.getElementById('numero_documento_leido');
-    
+
                     if (data.nombre && data.apellidos && data.numero_documento) {
                         nombreSpan.textContent = data.nombre;
                         apellidosSpan.textContent = data.apellidos;
@@ -389,8 +398,8 @@
                         infoDiv.style.display = 'block';
                     } else {
                         infoDiv.style.display = 'none';
-                        alert(`No se pudieron leer correctamente los datos del dorso del DNI. Detalles del servidor: ${JSON.stringify(data)}`);
-                    }
+                        alert('No se 777pudieron leer Nombre: {data.nombre} los datos del dorso del DNI. Número de Documento: ${data.numero_documento}');
+                    }  
                 } else {
                     console.log(`Datos para ${documentType}:`, data);
                 }
@@ -401,7 +410,7 @@
                 infoDiv.style.display = 'none';
             }
         }
-    
+
         function dataURLtoBlob(dataurl) {
             const arr = dataurl.split(',');
             const mime = arr[0].match(/:(.*?);/)[1];
@@ -413,15 +422,16 @@
             }
             return new Blob([u8arr], { type: mime });
         }
-    
+
         procesarButton.addEventListener('click', function() {
             console.log('Datos de los documentos:', datosDocumentos);
             // ... (tu lógica de validación y procesamiento existente) ...
-            alert('Documentos procesados (simulado).'); // Simulación de procesamiento
+            alert('Documentos  procesados (simulado).'); // Simulación de procesamiento
         });
-    
+
         // Iniciar la cámara al cargar la página (opcional, se puede iniciar solo al hacer clic en un botón)
         // startCamera();
     </script>
+
 </body>
 </html>

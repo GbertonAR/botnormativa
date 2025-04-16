@@ -2,280 +2,118 @@ import os
 import re
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for
 from PIL import Image, ImageEnhance
-import pytesseract
-from passporteye import read_mrz
-#from passporteye.mrz.mrz import MRZ
-#from passporteye.mrz.td import MRZ  # 'td' podría referirse a 'travel document'
+# import pytesseract  <-- ELIMINADO
+# from passporteye import read_mrz  <-- ELIMINADO
+
 # Importa tu conexión a la base de datos y modelos si los tienes
 from .canje_modelos import Provincia, Municipio, Canje
 from .adm_db import get_db, close_db, insertar_datos_canje
 import random
 import time
-#from .canje_app import canje_bp
-#from pymrz import MRZ
-#from pymrz.mrz import MRZ  # Intenta esta importación
 from datetime import datetime
 
+# Importar las bibliotecas de Azure
+from azure.cognitiveservices.vision.computervision import ComputerVisionClient
+from azure.cognitiveservices.vision.computervision.models import OperationStatusCodes
+from msrest.authentication import CognitiveServicesCredentials
+from azure.ai.documentintelligence import DocumentIntelligenceClient
+from azure.core.credentials import AzureKeyCredential
+import logging
 
+# Configurar logging
+logging.basicConfig(level=logging.DEBUG)
 
 # *** INSTRUCCIÓN IMPORTANTE: ESTE ES EL BLUEPRINT PARA LA FUNCIONALIDAD DE "CANJE" ***
 canje_bp = Blueprint('canje', __name__, template_folder='../templates', static_folder='../static', url_prefix='/canje')
 UPLOAD_FOLDER = os.path.join('canje', 'imagenes', 'aprocesar')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+TEMP_UPLOAD_FOLDER = 'temp_uploads'
+os.makedirs(TEMP_UPLOAD_FOLDER, exist_ok=True)
 
-# Asegúrate de que la ruta a tesseract esté configurada correctamente
-pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'  # Ajusta según tu sistema
-pytesseract.tessdata_dir = '/usr/share/tesseract-ocr/5/tessdata'  # Reemplaza con la ruta real a tu tessdata
+# *** CONFIGURACIÓN DE LAS CREDENCIALES DE AZURE ***
+# Debes configurar estas variables de entorno o directamente aquí con tus claves y endpoint
+#COMPUTER_VISION_ENDPOINT = os.environ.get("COMPUTER_VISION_ENDPOINT")
+COMPUTER_VISION_ENDPOINT = "https://aicanje.cognitiveservices.azure.com/"
+#COMPUTER_VISION_KEY = os.environ.get("COMPUTER_VISION_KEY")
+COMPUTER_VISION_KEY = "4ftcMxAJZpHI5NYoXooXcTpqCUjWp4pRMLkK0RvIQC8r28hP4eDLJQQJ99BDAC4f1cMXJ3w3AAAFACOGuO6L"
+DOCUMENT_INTELLIGENCE_ENDPOINT = os.environ.get("DOCUMENT_INTELLIGENCE_ENDPOINT")
+DOCUMENT_INTELLIGENCE_KEY = os.environ.get("DOCUMENT_INTELLIGENCE_KEY")
+DOCUMENT_INTELLIGENCE_ENDPOINT = "https://normaia.cognitiveservices.azure.com/"
+DOCUMENT_INTELLIGENCE_KEY = "GAC94o2zvuvEbEAoHWQSAVgmA9c7Hlwqy4UoT6d7k6rhzhi6ZWYwJQQJ99BDACYeBjFXJ3w3AAALACOGXJ1t"
+
+# Inicializar los clientes de Azure
+computervision_client = None
+if COMPUTER_VISION_ENDPOINT and COMPUTER_VISION_KEY:
+    computervision_client = ComputerVisionClient(COMPUTER_VISION_ENDPOINT, CognitiveServicesCredentials(COMPUTER_VISION_KEY))
+else:
+    logging.warning("No se configuraron las credenciales de Computer Vision.")
+
+document_intelligence_client = None
+if DOCUMENT_INTELLIGENCE_ENDPOINT and DOCUMENT_INTELLIGENCE_KEY:
+    document_intelligence_client = DocumentIntelligenceClient(DOCUMENT_INTELLIGENCE_ENDPOINT, AzureKeyCredential(DOCUMENT_INTELLIGENCE_KEY))
+else:
+    logging.warning("No se configuraron las credenciales de Document Intelligence.")
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def extract_text_from_image(image_path):
+
+# *** FUNCIÓN DE EXTRACCIÓN DE TEXTO CON AZURE COMPUTER VISION ***
+def extract_text_from_image_azure(image_path):
+    if not computervision_client:
+        return "Error: Computer Vision no está configurado."
     try:
-        img = Image.open(image_path)
-        #text = pytesseract.image_to_string(img, lang='spa')
-        text = pytesseract.image_to_string(img, lang='eng')
-        return text
+        with open(image_path, "rb") as image_stream:
+            read_response = computervision_client.read_in_stream(image_stream, raw=True)
+        read_operation_location = read_response.headers["Operation-Location"]
+        operation_id = read_operation_location.split("/")[-1]
+
+        while True:
+            read_result = computervision_client.get_read_result(operation_id)
+            if read_result.status not in ["notStarted", "running"]:
+                break
+            time.sleep(1)
+
+        text = ""
+        if read_result.status == OperationStatusCodes.succeeded:
+            for read_result_page in read_result.analyze_result.read_results:
+                for line in read_result_page.lines:
+                    text += line.text + "\n"
+        return text.strip()
     except Exception as e:
-        print(f"Error al realizar OCR: {e}")
+        logging.error(f"Error al realizar OCR con Azure Computer Vision: {e}")
         return None
 
-# def extract_dni_data(image_path):
-#     """
-#     Intenta leer la información del MRZ del dorso del DNI utilizando la biblioteca passporteye.
-#     """
-#     try:
-#         img = Image.open(image_path)
-#         mrz_data = read_mrz(image_path)
-
-#         print(f"Datos MRZ brutos (passporteye): {mrz_data}")
-#         print(f"¿MRZ Válido? (passporteye): {mrz_data.valid}")
-#         print(f"Campos MRZ (passporteye): {mrz_data.__dict__}")
-
-#         if mrz_data:
-#             nombre = mrz_data.names
-#             apellidos = mrz_data.surname
-#             numero_documento = mrz_data.number.rstrip('<')  # Eliminar caracteres '<' al final
-#             print(f"Nombre extraído: {nombre}")
-#             print(f"Apellidos extraídos: {apellidos}")
-#             print(f"Número de Documento extraído: {numero_documento}")
-#             return nombre, apellidos, numero_documento
-#         else:
-#             print("passporteye no detectó ningún MRZ.")
-#             return None, None, None
-
-#     except Exception as e:
-#         print(f"Error al leer el MRZ con passporteye: {e}")
-#         return None, None, None
-
-@canje_bp.route('/upload_camara', methods=['POST'])
-def upload_document_camara():
-    if 'document' not in request.files:
-        return jsonify({'error': 'No se proporcionó ninguna imagen'}), 400
-
-    document = request.files['document']
-    document_type = request.form.get('document_type')
-
-    if document.filename == '':
-        return jsonify({'error': 'No se seleccionó ninguna imagen'}), 400
-
-    if document:
-        filename = f"camara_{document_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png" # Nombre más descriptivo
-        filepath = os.path.join('temp_uploads', filename)
-        os.makedirs('temp_uploads', exist_ok=True)
-        document.save(filepath)
-
-        if document_type == 'dorso_dni':
-            nombre, apellidos, numero_documento = extract_dni_data_camara(filepath) # Nueva función específica
-            os.remove(filepath)
-            if nombre and apellidos and numero_documento:
-                return jsonify({
-                    'filename': filename,
-                    'document_type': document_type,
-                    'nombre': nombre,
-                    'apellidos': apellidos,
-                    'numero_documento': numero_documento
-                })
-            else:
-                return jsonify({
-                    'filename': filename,
-                    'document_type': document_type,
-                    'error': 'No se pudieron leer los datos del dorso del DNI (cámara).'
-                }), 400
-        else:
-            text = extract_text_from_image_camara(filepath) # Nueva función específica
-            os.remove(filepath)
-            return jsonify({'filename': filename, 'document_type': document_type, 'ocr_text': text})
-
-    return jsonify({'error': 'Error al cargar la imagen de la cámara'}), 500
-
-def extract_dni_data_camara(image_path):
-    """Función específica para extraer datos del DNI desde imágenes de cámara."""
-    # Aquí puedes implementar un preprocesamiento más agresivo
-    # o parámetros de OCR optimizados para imágenes de cámara.
-    # Podrías incluso intentar detectar bordes y corregir la perspectiva.
-    # Luego, llamar a la lógica de lectura del MRZ (posiblemente la misma que extract_dni_data).
-    img = Image.open(image_path)
-    # Ejemplo de preprocesamiento adicional para imágenes de cámara
-    enhancer = ImageEnhance.Contrast(img)
-    img = enhancer.enhance(1.8)
-    # ... otros preprocesamientos ...
-    mrz_data = read_mrz(img)
-    # ... (lógica de extracción similar a extract_dni_data) ...
-    if mrz_data and mrz_data.valid:
-        return mrz_data.names, mrz_data.surname, mrz_data.number.rstrip('<')
-    return None, None, None
-
-def extract_text_from_image_camara(image_path):
-    """Función específica para OCR de otros documentos desde imágenes de cámara."""
-    # Implementación similar a extract_text_from_image con posibles optimizaciones
-    return extract_text_from_image(image_path) # O una versión modificada
-
-def extract_dni_data(image_path):
-    try:
-        img = Image.open(image_path).convert('L')  # Convertir a escala de grises
-
-        # Mejora del contraste
-        enhancer = ImageEnhance.Contrast(img)
-        img = enhancer.enhance(1.5)
-
-        # Mejora de la nitidez (opcional)
-        enhancer_sharpness = ImageEnhance.Sharpness(img)
-        img = enhancer_sharpness.enhance(2.0)
-
-        # Pasar la imagen preprocesada a passporteye
-        mrz_data = read_mrz(img) # ¡Pasa el objeto Image, no la ruta!
-
-        print(f"Datos MRZ brutos (passporteye): {mrz_data}")
-        print(f"¿MRZ Válido? (passporteye): {mrz_data.valid}")
-        print(f"Campos MRZ (passporteye): {mrz_data.__dict__}")
-
-        if mrz_data and mrz_data.valid: # Asegúrate de que se detectó un MRZ válido
-            nombre = mrz_data.names
-            apellidos = mrz_data.surname
-            numero_documento = mrz_data.number.rstrip('<')
-            print(f"Nombre extraído: {nombre}")
-            print(f"Apellidos extraídos: {apellidos}")
-            print(f"Número de Documento extraído: {numero_documento}")
-            return nombre, apellidos, numero_documento
-        else:
-            print("passporteye no detectó un MRZ válido.")
-            return None, None, None
-
-    except Exception as e:
-        print(f"Error al leer el MRZ con passporteye: {e}")
+# *** FUNCIÓN DE EXTRACCIÓN DE DATOS DEL DNI CON AZURE DOCUMENT INTELLIGENCE ***
+def extract_dni_data_azure(image_bytes):
+    if not document_intelligence_client:
         return None, None, None
-    
-@canje_bp.route('/', methods=['GET'])
-def canje_form():
-    return render_template('canje.html')
+    try:
+        logging.debug(f"Tipo de 'document' antes de analyze: {type(image_bytes)}")
+        poller = document_intelligence_client.begin_analyze_document(
+            "prebuilt-idDocument",
+            document=image_bytes
+        )
+        result = poller.result()
 
-# @canje_bp.route('/', methods=['GET'])
-# def index():
-#     return render_template('canje.html')
+        nombre = None
+        apellidos = None
+        numero_documento = None
 
-@canje_bp.route('/capture_canje', methods=['GET'])
-def capture_canje_form():
-    return render_template('capture_canje.html')
+        for doc in result.documents:
+            for name, field in doc.fields.items():
+                if name == "firstName":
+                    nombre = field.value
+                elif name == "lastName":
+                    apellidos = field.value
+                elif name == "documentNumber":
+                    numero_documento = field.value
 
-@canje_bp.route('/ver_datos_canje', methods=['GET'])
-def capture_ver_datos_canje():
-    return render_template('ver_canjes_db.html')
+        return nombre, apellidos, numero_documento
+    except Exception as e:
+        logging.error(f"Error al analizar el DNI con Azure Document Intelligence: {e}")
+        return None, None, None
 
-# @canje_bp.route('/upload', methods=['POST'])
-# def upload_file():
-#     if 'frente_dni' not in request.files:
-#         return jsonify({'error': 'No se proporcionó el archivo del frente del DNI'}), 400
-#     # ... (similar checks para otros archivos) ...
-
-#     frente_dni = request.files['frente_dni']
-#     dorso_dni = request.files.get('dorso_dni')
-#     licencia_frente = request.files.get('licencia_frente')
-#     licencia_dorso = request.files.get('licencia_dorso')
-#     linti = request.files.get('linti')
-#     curso_certificado = request.files.get('curso_certificado')
-#     psicofisico_certificado = request.files.get('psicofisico_certificado')
-#     legalidad_certificado = request.files.get('legalidad_certificado')
-
-#     if frente_dni and allowed_file(frente_dni.filename):
-#         filename_frente = f"frente_dni_{datetime.now().strftime('%Y%m%d%H%M%S')}.{frente_dni.filename.rsplit('.', 1)[1].lower()}"
-#         frente_dni.save(os.path.join(UPLOAD_FOLDER, filename_frente))
-#     else:
-#         filename_frente = None
-
-#     filename_dorso = None
-#     if dorso_dni and allowed_file(dorso_dni.filename):
-#         filename_dorso = f"dorso_dni_{datetime.now().strftime('%Y%m%d%H%M%S')}.{dorso_dni.filename.rsplit('.', 1)[1].lower()}"
-#         dorso_dni.save(os.path.join(UPLOAD_FOLDER, filename_dorso))
-
-#     filename_licencia_frente = None
-#     if licencia_frente and allowed_file(licencia_frente.filename):
-#         filename_licencia_frente = f"licencia_frente_{datetime.now().strftime('%Y%m%d%H%M%S')}.{licencia_frente.filename.rsplit('.', 1)[1].lower()}"
-#         licencia_frente.save(os.path.join(UPLOAD_FOLDER, filename_licencia_frente))
-
-#     filename_licencia_dorso = None
-#     if licencia_dorso and allowed_file(licencia_dorso.filename):
-#         filename_licencia_dorso = f"licencia_dorso_{datetime.now().strftime('%Y%m%d%H%M%S')}.{licencia_dorso.filename.rsplit('.', 1)[1].lower()}"
-#         licencia_dorso.save(os.path.join(UPLOAD_FOLDER, filename_licencia_dorso))
-
-#     filename_linti = None
-#     if linti and allowed_file(linti.filename):
-#         filename_linti = f"linti_{datetime.now().strftime('%Y%m%d%H%M%S')}.{linti.filename.rsplit('.', 1)[1].lower()}"
-#         linti.save(os.path.join(UPLOAD_FOLDER, filename_linti))
-
-#     filename_curso_certificado = None
-#     if curso_certificado and allowed_file(curso_certificado.filename):
-#         filename_curso_certificado = f"curso_certificado_{datetime.now().strftime('%Y%m%d%H%M%S')}.{curso_certificado.filename.rsplit('.', 1)[1].lower()}"
-#         curso_certificado.save(os.path.join(UPLOAD_FOLDER, filename_curso_certificado))
-
-#     filename_psicofisico_certificado = None
-#     if psicofisico_certificado and allowed_file(psicofisico_certificado.filename):
-#         filename_psicofisico_certificado = f"psicofisico_certificado_{datetime.now().strftime('%Y%m%d%H%M%S')}.{psicofisico_certificado.filename.rsplit('.', 1)[1].lower()}"
-#         psicofisico_certificado.save(os.path.join(UPLOAD_FOLDER, filename_psicofisico_certificado))
-
-#     filename_legalidad_certificado = None
-#     if legalidad_certificado and allowed_file(legalidad_certificado.filename):
-#         filename_legalidad_certificado = f"legalidad_certificado_{datetime.now().strftime('%Y%m%d%H%M%S')}.{legalidad_certificado.filename.rsplit('.', 1)[1].lower()}"
-#         legalidad_certificado.save(os.path.join(UPLOAD_FOLDER, filename_legalidad_certificado))
-
-#     mrz_data = None
-#     frente_dni_path = os.path.join(UPLOAD_FOLDER, filename_frente) if filename_frente else None
-#     if frente_dni_path:
-#         try:
-#             mrz_regions = read_mrz(frente_dni_path)
-#             if mrz_regions:
-#                 mrz_data = mrz_regions[0].to_dict()
-#                 print("Datos MRZ brutos (passporteye):", mrz_regions[0])
-#                 print("¿MRZ Válido? (passporteye):", mrz_regions[0].valid)
-#                 print("Campos MRZ (passporteye):", mrz_data)
-#         except Exception as e:
-#             print(f"Error al leer MRZ: {e}")
-
-#     extracted_data = {}
-#     if mrz_data and mrz_data.get('valid'):
-#         extracted_data['nombre'] = mrz_data.get('names', '').replace('<', ' ').strip().upper()
-#         extracted_data['apellido'] = mrz_data.get('surname', '').replace('<', ' ').strip().upper()
-#         extracted_data['dni'] = mrz_data.get('number', '').replace('<', '').strip()
-#         print(f"Nombre extraído: {extracted_data.get('nombre')}")
-#         print(f"Apellidos extraídos: {extracted_data.get('apellido')}")
-#         print(f"Número de Documento extraído: {extracted_data.get('dni')}")
-
-#     return jsonify({
-#         'filenames': {
-#             'frente_dni_imagen': filename_frente,
-#             'dorso_dni_imagen': filename_dorso,
-#             'licencia_frente_imagen': filename_licencia_frente,
-#             'licencia_dorso_imagen': filename_licencia_dorso,
-#             'linti_imagen': filename_linti,
-#             'curso_certificado_imagen': filename_curso_certificado,
-#             'psicofisico_certificado_imagen': filename_psicofisico_certificado,
-#             'legalidad_certificado_imagen': filename_legalidad_certificado
-#         },
-#         'extracted_data': extracted_data
-#     })
-    
-    
-##### Por mi cuenta #####
 @canje_bp.route('/upload', methods=['POST'])
 def upload_document():
     if 'document' not in request.files:
@@ -289,39 +127,120 @@ def upload_document():
 
     if document:
         filename = f"{document_type}_{document.filename}"
-        filepath = os.path.join('temp_uploads', filename)  # Guardar temporalmente
-        os.makedirs('temp_uploads', exist_ok=True)
+        filepath = os.path.join(TEMP_UPLOAD_FOLDER, filename)
         document.save(filepath)
 
-        if document_type == 'dorso_dni':
-            nombre, apellidos, numero_documento = extract_dni_data(filepath)
-            os.remove(filepath)  # Eliminar archivo temporal
-            return jsonify({'filename': filename, 'document_type': document_type, 'nombre': nombre,
-                            'apellidos': apellidos, 'numero_documento': numero_documento})
-        else:
-            text = extract_text_from_image(filepath)
-            os.remove(filepath)  # Eliminar archivo temporal
-            return jsonify({'filename': filename, 'document_type': document_type, 'ocr_text': text})
+        try:
+            if document_type == 'dorso_dni':
+                # Leer el contenido del archivo en memoria y pasarlo como bytes
+                with open(filepath, "rb") as f:
+                    image_bytes = f.read()
+                nombre, apellidos, numero_documento = extract_dni_data_azure(image_bytes)
+                if nombre and apellidos and numero_documento:
+                    return jsonify({
+                        'filename': filename,
+                        'document_type': document_type,
+                        'nombre': nombre,
+                        'apellidos': apellidos,
+                        'numero_documento': numero_documento
+                    })
+                else:
+                    return jsonify({
+                        'filename': filename,
+                        'document_type': document_type,
+                        'error': 'No se pudieron leer los datos del dorso del DNI (Azure).'
+                    }), 400
+            else:
+                ocr_text = extract_text_from_image_azure(filepath)
+                return jsonify({'filename': filename, 'document_type': document_type, 'ocr_text': ocr_text})
+        finally:
+            os.remove(filepath) # Asegurarse de eliminar el archivo temporal siempre
 
     return jsonify({'error': 'Error al cargar el documento'}), 500
+    
+@canje_bp.route('/upload_camara', methods=['POST'])
+def upload_document_camara():
+    if 'document' not in request.files:
+        return jsonify({'error': 'No se proporcionó ninguna imagen'}), 400
+
+    document = request.files['document']
+    document_type = request.form.get('document_type')
+
+    if document.filename == '':
+        return jsonify({'error': 'No se seleccionó ninguna imagen'}), 400
+
+    if document:
+        filename = f"camara_{document_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png" # Nombre más descriptivo
+        filepath = os.path.join(TEMP_UPLOAD_FOLDER, filename)
+        document.save(filepath)
+
+        try:
+            if document_type == 'dorso_dni':
+                nombre, apellidos, numero_documento = extract_dni_data_azure(filepath)
+                if nombre and apellidos and numero_documento:
+                    return jsonify({
+                        'filename': filename,
+                        'document_type': document_type,
+                        'nombre': nombre,
+                        'apellidos': apellidos,
+                        'numero_documento': numero_documento
+                    })
+                else:
+                    return jsonify({
+                        'filename': filename,
+                        'document_type': document_type,
+                        'error': 'No se pudieron leer los datos del dorso del DNI (Azure).'
+                    }), 400
+            else:
+                ocr_text = extract_text_from_image_azure(filepath)
+                return jsonify({'filename': filename, 'document_type': document_type, 'ocr_text': ocr_text})
+        finally:
+            os.remove(filepath) # Asegurarse de eliminar el archivo temporal siempre
+
+    return jsonify({'error': 'Error al cargar la imagen de la cámara'}), 500
+
+@canje_bp.route('/', methods=['GET'])
+def canje_form():
+    return render_template('canje.html')
+
+@canje_bp.route('/capture_canje', methods=['GET'])
+def capture_canje_form():
+    return render_template('capture_canje.html')
+
+@canje_bp.route('/ver_datos_canje', methods=['GET'])
+def capture_ver_datos_canje():
+    return render_template('ver_canjes_db.html')
+
+
+
 
 @canje_bp.route('/procesar', methods=['POST'])
 def procesar_documentos():
-    # Aquí recibirás los datos de los documentos (por ahora solo el último cargado)
-    # La lógica para procesar los 8 documentos y realizar el OCR se implementará aquí
-    if 'documents' not in request.files:
-        return jsonify({'error': 'No se proporcionaron documentos para procesar'}), 400
+    # Aquí recibirás los datos de los documentos capturados desde el frontend
+    data = request.json
+    print("Datos de los documentos recibidos para procesar:", data)
 
-    document = request.files['documents']
-    filename = document.filename
-    filepath = os.path.join('temp_uploads', filename)
-    os.makedirs('temp_uploads', exist_ok=True)
-    document.save(filepath)
+    processed_data = {}
+    for doc_type, doc_info in data.items():
+        if doc_info and doc_info.get('imageData'):
+            image_data = doc_info['imageData'].split(',')[1] # Remove data:image/png;base64,
+            image_bytes = base64.b64decode(image_data)
+            temp_filename = os.path.join(TEMP_UPLOAD_FOLDER, f"processed_{doc_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
+            with open(temp_filename, 'wb') as f:
+                f.write(image_bytes)
 
-    ocr_text = extract_text_from_image(filepath)
-    os.remove(filepath)
+            if doc_type == 'dorso_dni':
+                nombre, apellidos, numero_documento = extract_dni_data_azure(temp_filename)
+                processed_data[doc_type] = {'nombre': nombre, 'apellidos': apellidos, 'numero_documento': numero_documento}
+            else:
+                ocr_text = extract_text_from_image_azure(temp_filename)
+                processed_data[doc_type] = {'ocr_text': ocr_text}
 
-    return jsonify({'message': 'Documentos recibidos para procesamiento', 'filename': filename, 'ocr_text': ocr_text})
+            os.remove(temp_filename)
+        else:
+            processed_data[doc_type] = {'error': 'No se proporcionó imagen para este documento.'}
+
+    return jsonify({'message': 'Documentos procesados con Azure', 'processed_data': processed_data})
 
 @canje_bp.route('/results', methods=['GET'])
 def show_results():
@@ -352,24 +271,10 @@ def get_municipios(provincia_id):
 @canje_bp.route('/guardar_datos', methods=['POST'])
 def guardar_datos():
     data = request.json
-    # Aquí iría la lógica para guardar todos los datos en la base de datos
-    # (datos extraídos y los seleccionados por el usuario)
     print("Datos a guardar:", data)
-    success, message = insertar_datos_canje(data)                                                                                                                     
+    success, message = insertar_datos_canje(data)
     return jsonify({'success': True, 'message': 'Datos guardados'}), 200
 
-    
-# TESTEO LUNES 14/4 
-# @canje_bp.route('/guardar_datos', methods=['POST'])
-# def guardar_datos():
-#     data = request.json
-#     # Llama a la función insertar_datos_canje en adm_db.py para guardar los datos en la base de datos
-#     success, message = insertar_datos_canje(data)
-#     if success:
-#         return jsonify({'message': 'Datos de canje guardados exitosamente', 'id': message}), 201
-#     else:
-#         return jsonify({'error': f'Error al guardar los datos: {message}'}), 500
-    
 @canje_bp.route('/obtener_datos_canje', methods=['GET'])
 def obtener_datos_canje():
     conn = get_db()
@@ -423,11 +328,10 @@ def obtener_datos_canje():
     cursor.execute(totales_query, totales_params)
     totales = cursor.fetchone()
 
-    close_db(conn)  # <--- Cierra la conexión DESPUÉS de ambas consultas
+    close_db(conn)
 
     return jsonify({'registros': resultados, 'totales': dict(totales)})
 
-# NUEVA RUTA PARA VER EL DETALLE DEL REGISTRO
 @canje_bp.route('/detalle/<int:id>')
 def ver_detalle(id):
     conn = get_db()
@@ -449,51 +353,9 @@ def ver_detalle(id):
     registro = cursor.fetchone()
     close_db(conn)
     if registro:
-        return render_template('detalle_canje.html', registro=dict(registro)) # CREA ESTE NUEVO TEMPLATE
+        return render_template('detalle_canje.html', registro=dict(registro))
     else:
         return "Registro no encontrado", 404
-# def obtener_datos_canje():
-#     conn = get_db()
-#     cursor = conn.cursor()
-#     estado_filtro = request.args.get('estado')
-#     query = "SELECT * FROM DatosDeCanje"
-#     params = ()
-#     order_by_clause = """
-#         ORDER BY CASE ciudadano_presencial
-#             WHEN 'SI' THEN 0
-#             WHEN 'NO' THEN 1
-#             ELSE 2
-#         END
-#     """
-#     # if estado_filtro:
-#     #     query += " WHERE estado = ? ORDER BY ciudadano_presencial"
-#     #     params = (estado_filtro,)
-#     if estado_filtro:
-#         query += " WHERE estado = ?"
-#         params = (estado_filtro,)
-#         query += " " + order_by_clause
-#     else:
-#         query += " " + order_by_clause
-        
-#     cursor.execute(query, params)
-#     datos = cursor.fetchall()
-#     close_db(conn)
-#     # Formatear los datos como una lista de listas (o lista de diccionarios si prefieres)
-#     resultados = [list(row) for row in datos]
-#     return jsonify(resultados)    
-
-# # --- Rutas para cargar provincias y municipios ---
-# @canje_bp.route('/canje/provincias')
-# def get_provincias_sqlalchemy():
-#     provincias = Provincia.query.all()
-#     provincias_lista = [{'id': p.id, 'nombre': p.nombre} for p in provincias]
-#     return jsonify(provincias_lista)
-
-# @canje_bp.route('/canje/municipios/<int:provincia_id>')
-# def get_municipios_sqlalchemy(provincia_id):
-#     municipios = Municipio.query.filter_by(provincia_id=provincia_id).all()
-#     municipios_lista = [{'id': m.id, 'nombre': m.nombre} for m in municipios]
-#     return jsonify(municipios_lista)
 
 @canje_bp.route('/registro/<tramite_id>')
 def ver_registro(tramite_id):
@@ -514,8 +376,7 @@ def ver_registro(tramite_id):
 def buscar_registro():
     if request.method == 'POST':
         tramite_id = request.form.get('tramite_id')
-        return redirect(url_for('ver_registro.html', tramite_id=tramite_id))
+        return redirect(url_for('ver_registro', tramite_id=tramite_id))
     return render_template('buscar_registro.html')
-
 
 # *** IMPORTANTE: NO DEBES TENER app = Flask(__name__) NI app.run() AQUÍ ***
