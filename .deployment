@@ -1,2 +1,2 @@
 [config]
-command = /home/site/wwwroot/deploy.sh
+command = bash /home/site/wwwroot/deploy.sh
