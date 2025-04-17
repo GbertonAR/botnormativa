@@ -429,43 +429,76 @@ def upload_document():
 @canje_bp.route('/upload_camara', methods=['POST'])
 def upload_document_camara():
     if 'document' not in request.files:
-        return jsonify({'error': 'No se proporcionó ninguna imagen'}), 400
+        return jsonify({'error': 'No se proporcionó ningún documento'}), 400
 
     document = request.files['document']
     document_type = request.form.get('document_type')
 
     if document.filename == '':
-        return jsonify({'error': 'No se seleccionó ninguna imagen'}), 400
+        return jsonify({'error': 'No se seleccionó ningún documento'}), 400
 
     if document:
-        filename = f"camara_{document_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png" # Nombre más descriptivo
+        filename = f"{document_type}_{document.filename}"
         filepath = os.path.join(TEMP_UPLOAD_FOLDER, filename)
         document.save(filepath)
 
         try:
-            if document_type == 'dorso_dni':
-                nombre, apellidos, numero_documento = extract_dni_data_azure(filepath)
-                if nombre and apellidos and numero_documento:
-                    return jsonify({
-                        'filename': filename,
-                        'document_type': document_type,
-                        'nombre': nombre,
-                        'apellidos': apellidos,
-                        'numero_documento': numero_documento
-                    })
-                else:
-                    return jsonify({
-                        'filename': filename,
-                        'document_type': document_type,
-                        'error': 'No se pudieron leer los datos del dorso del DNI (Azure).'
-                    }), 400
-            else:
-                ocr_text = extract_text_from_image_azure(filepath)
+            ocr_text = extract_text_from_image_azure(filepath)
+            if document_type in REGLAS_DOCUMENTOS:
+                funcion_regla = REGLAS_DOCUMENTOS[document_type]
+                resultado_validacion = funcion_regla(ocr_text)
+                return jsonify(resultado_validacion)
+            elif ocr_text:
                 return jsonify({'filename': filename, 'document_type': document_type, 'ocr_text': ocr_text})
+            else:
+                return jsonify({
+                    'filename': filename,
+                    'document_type': document_type,
+                    'error': f'No se pudo extraer texto del {document_type} con OCR de Azure.'
+                }), 400
         finally:
-            os.remove(filepath) # Asegurarse de eliminar el archivo temporal siempre
+            os.remove(filepath)
 
-    return jsonify({'error': 'Error al cargar la imagen de la cámara'}), 500
+    return jsonify({'error': 'Error al cargar el documento'}), 500
+# def upload_document_camara():
+#     if 'document' not in request.files:
+#         return jsonify({'error': 'No se proporcionó ninguna imagen'}), 400
+
+#     document = request.files['document']
+#     document_type = request.form.get('document_type')
+
+#     if document.filename == '':
+#         return jsonify({'error': 'No se seleccionó ninguna imagen'}), 400
+
+#     if document:
+#         filename = f"camara_{document_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png" # Nombre más descriptivo
+#         filepath = os.path.join(TEMP_UPLOAD_FOLDER, filename)
+#         document.save(filepath)
+
+#         try:
+#             if document_type == 'dorso_dni':
+#                 nombre, apellidos, numero_documento = extract_dni_data_azure(filepath)
+#                 if nombre and apellidos and numero_documento:
+#                     return jsonify({
+#                         'filename': filename,
+#                         'document_type': document_type,
+#                         'nombre': nombre,
+#                         'apellidos': apellidos,
+#                         'numero_documento': numero_documento
+#                     })
+#                 else:
+#                     return jsonify({
+#                         'filename': filename,
+#                         'document_type': document_type,
+#                         'error': 'No se pudieron leer los datos del dorso del DNI (Azure).'
+#                     }), 400
+#             else:
+#                 ocr_text = extract_text_from_image_azure(filepath)
+#                 return jsonify({'filename': filename, 'document_type': document_type, 'ocr_text': ocr_text})
+#         finally:
+#             os.remove(filepath) # Asegurarse de eliminar el archivo temporal siempre
+
+#     return jsonify({'error': 'Error al cargar la imagen de la cámara'}), 500
 
 @canje_bp.route('/', methods=['GET'])
 def canje_form():
