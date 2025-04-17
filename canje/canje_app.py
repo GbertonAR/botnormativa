@@ -58,6 +58,7 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+
 # *** FUNCIÓN DE EXTRACCIÓN DE TEXTO CON AZURE COMPUTER VISION ***
 def extract_text_from_image_azure(image_path):
     if not computervision_client:
@@ -126,6 +127,169 @@ def extract_mrz_data(image_path):
     except Exception as e:
         print(f"Error al leer el MRZ: {e}")
         return None
+    
+def regla_frente_dni(ocr_text):
+    if not ocr_text:
+        return {'error': 'No se pudo realizar OCR en la imagen.'}
+
+    ocr_lower = ocr_text.lower()
+    if "republica argentina" in ocr_lower and \
+       "registro nacional de las personas" in ocr_lower and \
+       "tramite" in ocr_lower:
+        nombre_match = re.search(r"NOMBRE(?:S)?\s+(.+)", ocr_text)
+        apellido_match = re.search(r"APELLIDO(?:S)?\s+(.+)", ocr_text)
+        dni_match = re.search(r"DNI\s+(\d{7,9})", ocr_text)
+
+        nombre = nombre_match.group(1).strip() if nombre_match else None
+        apellidos = apellido_match.group(1).strip() if apellido_match else None
+        numero_documento = dni_match.group(1).strip() if dni_match else None
+
+        return {'nombre': nombre, 'apellidos': apellidos, 'numero_documento': numero_documento}
+    else:
+        return {'error': 'La imagen no corresponde al frente del DNI.'}
+
+# def regla_dorso_dni(ocr_text):
+#     if not ocr_text:
+#         return {'error': 'No se pudo realizar OCR en la imagen del dorso del DNI.'}
+
+#     apellido_nombre_match = re.search(r"([A-Z]+)\s*<<\s*([A-Z]+(?:\s*[A-Z]+)*)\s*<", ocr_text)
+#     numero_doc_match = re.search(r"([A-Z0-9]+)<", ocr_text)
+
+#     apellidos = apellido_nombre_match.group(1).strip() if apellido_nombre_match else None
+#     nombre = apellido_nombre_match.group(2).strip() if apellido_nombre_match else None
+#     numero_documento = numero_doc_match.group(1).strip() if numero_doc_match else None
+
+#     return {'nombre': nombre, 'apellidos': apellidos, 'numero_documento': numero_documento}
+def regla_dorso_dni(ocr_text):
+    if not ocr_text:
+        return {'error': 'No se pudo realizar OCR en la imagen del dorso del DNI.'}
+    
+    if "CUIL" not in ocr_text.upper():
+        return {'error': 'No se encontró la palabra "CUIL" en el dorso del DNI. La imagen no es válida.'}
+
+    apellido_nombre_match = re.search(r"([A-Z]+)\s*<<\s*([A-Z]+(?:\s*[A-Z]+)*)\s*<", ocr_text)
+    numero_doc_match = re.search(r"(?:IDARG)?(\d+)<", ocr_text) # Busca opcionalmente "IDARG" seguido de dígitos antes de "<"
+
+    apellidos = apellido_nombre_match.group(1).strip() if apellido_nombre_match else None
+    nombre = apellido_nombre_match.group(2).strip() if apellido_nombre_match else None
+    numero_documento = numero_doc_match.group(1).strip() if numero_doc_match else None
+
+    return {'nombre': nombre, 'apellidos': apellidos, 'numero_documento': numero_documento}
+
+# def regla_psicofisico(ocr_text):
+#     if not ocr_text:
+#         return {'error': 'No se pudo realizar OCR en el Psicofísico.'}
+
+#     if "PSICOFISICO" not in ocr_text.upper() and \
+#         "PSICOFISICA" not in ocr_text.upper() and \
+#         "PSICOFÍSICO" not in ocr_text.upper() and \
+#         "PSICOFÍSICA" not in ocr_text.upper():
+#              return {'error': 'No se encontró la palabra "PSICOFISICO" en el documento. No es un psicofísico válido.'}
+
+#     nombre_match = re.search(r"NOMBRE(?:S)?\s*:\s*([A-Z\s]+)", ocr_text, re.IGNORECASE)
+#     apellido_match = re.search(r"APELLIDO(?:S)?\s*:\s*([A-Z\s]+)", ocr_text, re.IGNORECASE)
+#     dni_match = re.search(r"D\.N\.I\.?\s*:\s*(\d{7,9})", ocr_text, re.IGNORECASE)
+#     prestador_match = re.search(r"PRESTADOR\s*:\s*([A-Z\s\d\.\-]+)", ocr_text, re.IGNORECASE) # Ajustar regex según formato
+#     fecha_examen_match = re.search(r"FECHA\s*DE\s*EXAMEN\s*:\s*(\d{2}/\d{2}/\d{4})", ocr_text, re.IGNORECASE) # Ajustar regex según formato
+
+#     nombre = nombre_match.group(1).strip() if nombre_match else None
+#     apellido = apellido_match.group(1).strip() if apellido_match else None
+#     dni = dni_match.group(1).strip() if dni_match else None
+#     prestador = prestador_match.group(1).strip() if prestador_match else None
+#     fecha_examen = fecha_examen_match.group(1).strip() if fecha_examen_match else None
+
+#     return {
+#         'psicofisico_nombre': nombre,
+#         'psicofisico_apellido': apellido,
+#         'psicofisico_dni': dni,
+#         'psicofisico_prestador': prestador,
+#         'psicofisico_f_examen': fecha_examen
+#     }
+
+def regla_psicofisico(ocr_text):
+    if not ocr_text:
+        return {'error': 'No se pudo realizar OCR en el Psicofísico.'}
+
+    if "PSICOFISICO" not in ocr_text.upper() and \
+       "PSICOFISICA" not in ocr_text.upper() and \
+       "PSICOFÍSICO" not in ocr_text.upper() and \
+       "PSICOFÍSICA" not in ocr_text.upper():
+        return {'error': 'No se encontró la palabra "PSICOFISICO", "PSICOFISICA", "PSICOFÍSICO" o "PSICOFÍSICA" en el documento. No es un psicofísico válido.'}
+
+    # Intento de expresiones regulares más flexibles (necesitan ajuste con el texto completo)
+    apellido_match = re.search(r"APELLIDO:\s*(\w+\s*\w*)", ocr_text, re.IGNORECASE)
+    nombre_match = re.search(r"NOMBRE:\s*(\w+\s*\w*\s*\w*)", ocr_text, re.IGNORECASE)
+    dni_match = re.search(r"DNI:\s*(\d{7,9})", ocr_text, re.IGNORECASE)
+    prestador_match = re.search(r"PRESTADOR:\s*(.+?)(?:APELLIDO:|F\. EXAMEN:)", ocr_text, re.IGNORECASE | re.DOTALL)
+    fecha_examen_match = re.search(r"F\. EXAMEN:\s*(\d{2}/\d{2}/\d{4})", ocr_text, re.IGNORECASE)
+
+    apellido = apellido_match.group(1).strip() if apellido_match else None
+    nombre = nombre_match.group(1).strip() if nombre_match else None
+    dni = dni_match.group(1).strip() if dni_match else None
+    prestador = prestador_match.group(1).strip() if prestador_match else None
+    fecha_examen = fecha_examen_match.group(1).strip() if fecha_examen_match else None
+
+    # Limpieza adicional para apellido y nombre (remover caracteres no deseados al final)
+    if apellido:
+        apellido = re.sub(r'\s*DNI$', '', apellido).strip()
+    if nombre:
+        nombre = re.sub(r'\s*CATEGORIA$', '', nombre).strip()
+        
+    return {
+        'psicofisico_nombre': nombre,
+        'psicofisico_apellido': apellido,
+        'psicofisico_dni': dni,
+        'psicofisico_prestador': prestador,
+        'psicofisico_f_examen': fecha_examen
+    }
+    
+# *** REGLAS DE VALIDACIÓN DE DOCUMENTOS ***
+# Aquí puedes definir las reglas de validación para cada tipo de documento
+REGLAS_DOCUMENTOS = {
+    'frente_dni': regla_frente_dni,
+    'dorso_dni': regla_dorso_dni,
+    'licencia_municipal_frente': lambda ocr: {'ocr_text': ocr}, # Placeholder
+    'licencia_municipal_dorso': lambda ocr: {'ocr_text': ocr}, # Placeholder
+    'psicofisico': regla_psicofisico,
+    'certificado_curso': lambda ocr: {'ocr_text': ocr},       # Placeholder
+    'licencia_linti': lambda ocr: {'ocr_text': ocr},         # Placeholder
+    'certificado_legalidad': lambda ocr: {'ocr_text': ocr},   # Placeholder
+}
+
+@canje_bp.route('/upload', methods=['POST'])
+def upload_document():
+    if 'document' not in request.files:
+        return jsonify({'error': 'No se proporcionó ningún documento'}), 400
+
+    document = request.files['document']
+    document_type = request.form.get('document_type')
+
+    if document.filename == '':
+        return jsonify({'error': 'No se seleccionó ningún documento'}), 400
+
+    if document:
+        filename = f"{document_type}_{document.filename}"
+        filepath = os.path.join(TEMP_UPLOAD_FOLDER, filename)
+        document.save(filepath)
+
+        try:
+            ocr_text = extract_text_from_image_azure(filepath)
+            if document_type in REGLAS_DOCUMENTOS:
+                funcion_regla = REGLAS_DOCUMENTOS[document_type]
+                resultado_validacion = funcion_regla(ocr_text)
+                return jsonify(resultado_validacion)
+            elif ocr_text:
+                return jsonify({'filename': filename, 'document_type': document_type, 'ocr_text': ocr_text})
+            else:
+                return jsonify({
+                    'filename': filename,
+                    'document_type': document_type,
+                    'error': f'No se pudo extraer texto del {document_type} con OCR de Azure.'
+                }), 400
+        finally:
+            os.remove(filepath)
+
+    return jsonify({'error': 'Error al cargar el documento'}), 500
 
 # @canje_bp.route('/upload', methods=['POST'])
 # def upload_document():
@@ -183,54 +347,84 @@ def extract_mrz_data(image_path):
 
 #     return jsonify({'error': 'Error al cargar el documento'}), 500
 
-@canje_bp.route('/upload', methods=['POST'])
-def upload_document():
-    if 'document' not in request.files:
-        return jsonify({'error': 'No se proporcionó ningún documento'}), 400
+# @canje_bp.route('/upload', methods=['POST'])
+# def upload_document():
+#     if 'document' not in request.files:
+#         return jsonify({'error': 'No se proporcionó ningún documento'}), 400
 
-    document = request.files['document']
-    document_type = request.form.get('document_type')
+#     document = request.files['document']
+#     document_type = request.form.get('document_type')
 
-    if document.filename == '':
-        return jsonify({'error': 'No se seleccionó ningún documento'}), 400
+#     if document.filename == '':
+#         return jsonify({'error': 'No se seleccionó ningún documento'}), 400
 
-    if document:
-        filename = f"{document_type}_{document.filename}"
-        filepath = os.path.join(TEMP_UPLOAD_FOLDER, filename)
-        document.save(filepath)
+#     if document:
+#         filename = f"{document_type}_{document.filename}"
+#         filepath = os.path.join(TEMP_UPLOAD_FOLDER, filename)
+#         document.save(filepath)
 
-        try:
-            ocr_text = extract_text_from_image_azure(filepath)
-            if document_type == 'dorso_dni' and ocr_text:
-                # Intenta extraer nombre, apellidos y número si es un DNI (esto puede necesitar ajustes)
-                nombre_match = re.search(r"NOMBRE\s+(.+)", ocr_text)
-                apellido_match = re.search(r"APELLIDO\s+(.+)", ocr_text)
-                numero_match = re.search(r"NRO\. DOC\s+(.+)", ocr_text)
+#         try:
+#             ocr_text = extract_text_from_image_azure(filepath)
+ 
+#             if document_type == 'frente_dni':
+#                     resultado_validacion = regla_frente_dni(ocr_text)
+#                     return jsonify(resultado_validacion)
+#             elif document_type == 'dorso_dni' and ocr_text:
+#                     # Expresiones regulares para el dorso del DNI (manteniendo las últimas que funcionaron)
+#                     apellido_nombre_match = re.search(r"([A-Z]+)\s*<<\s*([A-Z]+(?:\s*[A-Z]+)*)\s*<", ocr_text)
+#                     numero_doc_match = re.search(r"([A-Z0-9]+)<", ocr_text)
 
-                nombre = nombre_match.group(1).strip() if nombre_match else None
-                apellidos = apellido_match.group(1).strip() if apellido_match else None
-                numero_documento = numero_match.group(1).strip() if numero_match else None
+#                     apellidos = apellido_nombre_match.group(1).strip() if apellido_nombre_match else None
+#                     nombre = apellido_nombre_match.group(2).strip() if apellido_nombre_match else None
+#                     numero_documento = numero_doc_match.group(1).strip() if numero_doc_match else None
 
-                return jsonify({
-                    'filename': filename,
-                    'document_type': document_type,
-                    'ocr_text': ocr_text,
-                    'nombre': nombre,
-                    'apellidos': apellidos,
-                    'numero_documento': numero_documento
-                })
-            elif ocr_text:
-                return jsonify({'filename': filename, 'document_type': document_type, 'ocr_text': ocr_text})
-            else:
-                return jsonify({
-                    'filename': filename,
-                    'document_type': document_type,
-                    'error': f'No se pudo extraer texto del {document_type} con OCR de Azure.'
-                }), 400
-        finally:
-            os.remove(filepath)
+#                     return jsonify({
+#                         'filename': filename,
+#                         'document_type': document_type,
+#                         'ocr_text': ocr_text,
+#                         'nombre': nombre,
+#                         'apellidos': apellidos,
+#                         'numero_documento': numero_documento
+#                     })
+#             elif ocr_text:
+#                     return jsonify({'filename': filename, 'document_type': document_type, 'ocr_text': ocr_text})
+#             else:
+#                     return jsonify({
+#                         'filename': filename,
+#                         'document_type': document_type,
+#                         'error': f'No se pudo extraer texto del {document_type} con OCR de Azure.'
+#                     }), 400
+ 
+#             if document_type == 'dorso_dni' and ocr_text:
+#                 # Intenta extraer nombre, apellidos y número si es un DNI (esto puede necesitar ajustes)
+#                 nombre_match = re.search(r"NOMBRE\s+(.+)", ocr_text)
+#                 apellido_match = re.search(r"APELLIDO\s+(.+)", ocr_text)
+#                 numero_match = re.search(r"NRO\. DOC\s+(.+)", ocr_text)
 
-    return jsonify({'error': 'Error al cargar el documento'}), 500
+#                 nombre = nombre_match.group(1).strip() if nombre_match else None
+#                 apellidos = apellido_match.group(1).strip() if apellido_match else None
+#                 numero_documento = numero_match.group(1).strip() if numero_match else None
+
+#                 return jsonify({
+#                     'filename': filename,
+#                     'document_type': document_type,
+#                     'ocr_text': ocr_text,
+#                     'nombre': nombre,
+#                     'apellidos': apellidos,
+#                     'numero_documento': numero_documento
+#                 })
+#             elif ocr_text:
+#                 return jsonify({'filename': filename, 'document_type': document_type, 'ocr_text': ocr_text})
+#             else:
+#                 return jsonify({
+#                     'filename': filename,
+#                     'document_type': document_type,
+#                     'error': f'No se pudo extraer texto del {document_type} con OCR de Azure.'
+#                 }), 400
+#         finally:
+#             os.remove(filepath)
+
+#     return jsonify({'error': 'Error al cargar el documento'}), 500
     
 @canje_bp.route('/upload_camara', methods=['POST'])
 def upload_document_camara():
