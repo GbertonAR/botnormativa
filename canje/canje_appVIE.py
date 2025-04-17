@@ -47,6 +47,7 @@ if COMPUTER_VISION_ENDPOINT and COMPUTER_VISION_KEY:
     computervision_client = ComputerVisionClient(COMPUTER_VISION_ENDPOINT, CognitiveServicesCredentials(COMPUTER_VISION_KEY))
 else:
     logging.warning("No se configuraron las credenciales de Computer Vision.")
+    
 
 document_intelligence_client = None
 if DOCUMENT_INTELLIGENCE_ENDPOINT and DOCUMENT_INTELLIGENCE_KEY:
@@ -59,31 +60,48 @@ def allowed_file(filename):
 
 
 # *** FUNCIÓN DE EXTRACCIÓN DE TEXTO CON AZURE COMPUTER VISION ***
-def extract_text_from_image_azure(image_path):
-    if not computervision_client:
-        return "Error: Computer Vision no está configurado."
+# def extract_text_from_image_azure(image_path):
+#     if not computervision_client:
+#         return "Error: Computer Vision no está configurado."
+#     try:
+#         with open(image_path, "rb") as image_stream:
+#             read_response = computervision_client.read_in_stream(image_stream, raw=True)
+#         read_operation_location = read_response.headers["Operation-Location"]
+#         operation_id = read_operation_location.split("/")[-1]
+
+#         while True:
+#             read_result = computervision_client.get_read_result(operation_id)
+#             if read_result.status not in ["notStarted", "running"]:
+#                 break
+#             time.sleep(1)
+
+#         text = ""
+#         if read_result.status == OperationStatusCodes.succeeded:
+#             for read_result_page in read_result.analyze_result.read_results:
+#                 for line in read_result_page.lines:
+#                     text += line.text + "\n"
+#         return text.strip()
+#     except Exception as e:
+#         logging.error(f"Error al realizar OCR con Azure Computer Vision: {e}")
+#         return None
+
+def extract_text_from_image_azure(image_bytes):
+    ocr_result = {"status": "failed", "analyze_result": None, "error_message": None}
+    if computervision_client is None:
+        ocr_result["error_message"] = "Cliente de Azure Computer Vision no inicializado."
+        return ocr_result
     try:
-        with open(image_path, "rb") as image_stream:
-            read_response = computervision_client.read_in_stream(image_stream, raw=True)
-        read_operation_location = read_response.headers["Operation-Location"]
-        operation_id = read_operation_location.split("/")[-1]
-
-        while True:
-            read_result = computervision_client.get_read_result(operation_id)
-            if read_result.status not in ["notStarted", "running"]:
-                break
-            time.sleep(1)
-
-        text = ""
-        if read_result.status == OperationStatusCodes.succeeded:
-            for read_result_page in read_result.analyze_result.read_results:
-                for line in read_result_page.lines:
-                    text += line.text + "\n"
-        return text.strip()
+        logging.debug(f"Tipo de 'document' antes de analyze: {type(image_bytes)}")
+        read_response = computervision_client.read(image_bytes, raw=True)
+        operation_location = read_response.headers["Operation-Location"]
+        operation_id = operation_location.split("/")[-1]
+        read_result = computervision_client.get_read_result(operation_id)
+        ocr_result["status"] = "succeeded"
+        ocr_result["analyze_result"] = read_result.as_dict()
     except Exception as e:
-        logging.error(f"Error al realizar OCR con Azure Computer Vision: {e}")
-        return None
-
+        logging.error(f"Error al realizar OCR con Azure: {e}")
+        ocr_result["error_message"] = str(e)
+    return ocr_result
 
 # *** FUNCIÓN DE EXTRACCIÓN DE DATOS DEL DNI CON AZURE DOCUMENT INTELLIGENCE ***
 def extract_dni_data_azure(image_bytes):
@@ -127,62 +145,6 @@ def extract_mrz_data(image_path):
         print(f"Error al leer el MRZ: {e}")
         return None
 
-# @canje_bp.route('/upload', methods=['POST'])
-# def upload_document():
-#     if 'document' not in request.files:
-#         return jsonify({'error': 'No se proporcionó ningún documento'}), 400
-
-#     document = request.files['document']
-#     document_type = request.form.get('document_type')
-
-#     if document.filename == '':
-#         return jsonify({'error': 'No se seleccionó ningún documento'}), 400
-
-#     if document:
-#         filename = f"{document_type}_{document.filename}"
-#         filepath = os.path.join(TEMP_UPLOAD_FOLDER, filename)
-#         document.save(filepath)
-
-#         try:
-#             if document_type == 'dorso_dni':
-#                 filepath = os.path.join(TEMP_UPLOAD_FOLDER, filename)
-#                 document.save(filepath)
-
-#                 mrz_data = extract_mrz_data(filepath)
-#                 if mrz_data:
-#                     return jsonify({
-#                         'filename': filename,
-#                         'document_type': document_type,
-#                         'mrz_data': mrz_data
-#                     })
-#                 else:
-#                     # Si no se pudo leer el MRZ, podrías intentar el enfoque de Azure (si quieres)
-#                     with open(filepath, "rb") as f:
-#                         image_bytes = f.read()
-#                     nombre, apellidos, numero_documento = extract_dni_data_azure(image_bytes)
-#                     if nombre and apellidos and numero_documento:
-#                         return jsonify({
-#                             'filename': filename,
-#                             'document_type': document_type,
-#                             'nombre': nombre,
-#                             'apellidos': apellidos,
-#                             'numero_documento': numero_documento,
-#                             'mrz_read_attempt': 'failed'
-#                         })
-#                     else:
-#                         return jsonify({
-#                             'filename': filename,
-#                             'document_type': document_type,
-#                             'error': 'No se pudieron leer los datos del dorso del DNI (MRZ y Azure).'
-#                         }), 400
-#             else:
-#                 ocr_text = extract_text_from_image_azure(filepath)
-#                 return jsonify({'filename': filename, 'document_type': document_type, 'ocr_text': ocr_text})
-#         finally:
-#             os.remove(filepath) # Asegurarse de eliminar el archivo temporal siempre
-
-#     return jsonify({'error': 'Error al cargar el documento'}), 500
-
 @canje_bp.route('/upload', methods=['POST'])
 def upload_document():
     if 'document' not in request.files:
@@ -200,37 +162,20 @@ def upload_document():
         document.save(filepath)
 
         try:
-            ocr_text = extract_text_from_image_azure(filepath)
-            if document_type == 'dorso_dni' and ocr_text:
-                # Intenta extraer nombre, apellidos y número si es un DNI (esto puede necesitar ajustes)
-                nombre_match = re.search(r"NOMBRE\s+(.+)", ocr_text)
-                apellido_match = re.search(r"APELLIDO\s+(.+)", ocr_text)
-                numero_match = re.search(r"NRO\. DOC\s+(.+)", ocr_text)
-
-                nombre = nombre_match.group(1).strip() if nombre_match else None
-                apellidos = apellido_match.group(1).strip() if apellido_match else None
-                numero_documento = numero_match.group(1).strip() if numero_match else None
-
-                return jsonify({
-                    'filename': filename,
-                    'document_type': document_type,
-                    'ocr_text': ocr_text,
-                    'nombre': nombre,
-                    'apellidos': apellidos,
-                    'numero_documento': numero_documento
-                })
-            elif ocr_text:
-                return jsonify({'filename': filename, 'document_type': document_type, 'ocr_text': ocr_text})
-            else:
-                return jsonify({
-                    'filename': filename,
-                    'document_type': document_type,
-                    'error': f'No se pudo extraer texto del {document_type} con OCR de Azure.'
-                }), 400
+            with open(filepath, "rb") as f:
+                image_bytes = f.read()
+            ocr_result = extract_text_from_image_azure(image_bytes)
+            return jsonify({
+                'filename': filename,
+                'document_type': document_type,
+                'ocr_result': ocr_result
+            })
         finally:
-            os.remove(filepath)
+            os.remove(filepath) # Asegurarse de eliminar el archivo temporal siempre
 
     return jsonify({'error': 'Error al cargar el documento'}), 500
+
+
     
 @canje_bp.route('/upload_camara', methods=['POST'])
 def upload_document_camara():

@@ -1,0 +1,154 @@
+{% extends 'canje_base.html' %}
+
+{% block title %}Proceso de Canje{% endblock %}
+{%block header %}
+    <h1>Proceso de Canje de Documentación</h1>
+{% endblock %}
+
+{% block content %}
+    <style>
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr 1.5fr 1.5fr; /* Ajuste de proporciones de columnas */
+            gap: 10px; /* Reducción del espacio entre elementos */
+            padding: 10px; /* Reducción del padding general */
+        }
+        .document-buttons button {
+            display: block;
+            width: 90%; /* Achicar la botonera */
+            margin: 5px auto; /* Centrar y reducir margen vertical */
+            padding: 8px; /* Reducir el padding de los botones */
+            box-sizing: border-box;
+            font-size: 0.9em; /* Reducir el tamaño de la fuente de los botones */
+        }
+        .preview-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .preview {
+            width: 100%;
+            height: auto; /* Altura automática para mantener la proporción */
+            border: 1px solid #ccc;
+            margin-bottom: 5px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .preview img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        .document-info {
+            margin-top: 10px;
+            padding: 8px;
+            border: 1px solid #eee;
+            background-color: #f9f9f9;
+            text-align: left; /* Alinear el texto a la izquierda en la columna de datos */
+        }
+        .document-info p {
+            margin: 3px 0;
+            font-size: 0.9em; /* Reducir el tamaño de la fuente de los datos */
+        }
+    </style>
+
+    <div class="container">
+        <div class="document-buttons">
+            <button id="frente_dni_button" class="scan-button rojo" onclick="triggerUpload('frente_dni')">Frente DNI</button>
+            <button id="dorso_dni_button" class="scan-button rojo" onclick="triggerUpload('dorso_dni')">Dorso DNI</button>
+            <button id="licencia_municipal_frente_button" class="scan-button rojo" onclick="triggerUpload('licencia_municipal_frente')">Lic. Municipal Frente</button>
+            <button id="licencia_municipal_dorso_button" class="scan-button rojo" onclick="triggerUpload('licencia_municipal_dorso')">Lic. Municipal Dorso</button>
+            <button id="psicofisico_button" class="scan-button rojo" onclick="triggerUpload('psicofisico')">Psicofisico</button>
+            <button id="certificado_curso_button" class="scan-button rojo" onclick="triggerUpload('certificado_curso')">Certificado Curso</button>
+            <button id="licencia_linti_button" class="scan-button rojo" onclick="triggerUpload('licencia_linti')">Licencia Linti</button>
+            <button id="certificado_legalidad_button" class="scan-button rojo" onclick="triggerUpload('certificado_legalidad')">Certificado Legalidad</button>
+            <button type="button" onclick="procesarDocumentos()">Procesar Documentos</button>
+        </div>
+        <div class="preview-container">
+            <strong>Frente DNI</strong>
+            <div id="preview_frente_dni" class="preview"></div>
+        </div>
+        <div class="preview-container">
+            <strong>Dorso DNI</strong>
+            <div id="preview_dorso_dni" class="preview"></div>
+        </div>
+        <div class="preview-container">
+            <strong>Datos DNI</strong>
+            <div id="dorso_dni_info" class="document-info" style="display: none;">
+                <p><strong>Nombre:</strong> <span id="nombre_leido"></span></p>
+                <p><strong>Apellidos:</strong> <span id="apellidos_leido"></span></p>
+                <p><strong>Número:</strong> <span id="numero_documento_leido"></span></p>
+            </div>
+        </div>
+        <div class="document-buttons">
+            <p> </p>
+        </div>
+        <div class="preview-container">
+            <strong>Licencia Municipal Frente</strong>
+            <div id="preview_licencia_municipal_frente" class="preview"></div>
+        </div>
+        <div class="preview-container">
+            <strong>Licencia Municipal Dorso</strong>
+            <div id="preview_licencia_municipal_dorso" class="preview"></div>
+        </div>
+        <div class="preview-container">
+            <strong>Psicofisico</strong>
+            <div id="preview_psicofisico" class="preview"></div>
+        </div>
+        <div class="document-buttons">
+            <p> </p>
+        </div>
+        <div class="preview-container">
+            <strong>Certificado Curso</strong>
+            <div id="preview_certificado_curso" class="preview"></div>
+        </div>
+        <div class="preview-container">
+            <strong>Licencia Linti</strong>
+            <div id="preview_licencia_linti" class="preview"></div>
+        </div>
+        <div class="preview-container">
+            <strong>Certificado Legalidad</strong>
+            <div id="preview_certificado_legalidad" class="preview"></div>
+        </div>
+    </div>
+
+    <div class="card" aline="center">
+        <div id="additional-data-form">
+            <h3>Información Adicional</h3>
+            <div>
+                <label>¿El ciudadano está presente?</label>
+                <input type="radio" id="ciudadano_presente_no" name="ciudadano_presente" value="NO" checked> NO
+                <input type="radio" id="ciudadano_presente_si" name="ciudadano_presente" value="SI"> SI
+            </div>
+            <div>
+                <label for="provincia">Provincia:</label>
+                <select id="provincia">
+                    <option value="">Seleccione una provincia</option>
+                </select>
+            </div>
+            <div>
+                <label for="municipio">Municipio:</label>
+                <select id="municipio" disabled>
+                    <option value="">Seleccione un municipio</option>
+                </select>
+            </div>
+            <button type="button" onclick="enviarDatos()">Guardar y Generar Transacción</button>
+        </div>
+    </div>
+    <div id="qr-container" style="display: none;">
+        <h3>Código de Transacción QR</h3>
+        <div id="qr-code"></div>
+        <p id="codigo-transaccion-texto"></p>
+    </div>
+
+    <form id="upload_form" method="POST" action="/canje/upload" enctype="multipart/form-data" style="display:none;">
+        <input type="file" name="document" id="document_upload">
+        <input type="hidden" name="document_type" id="document_type">
+    </form>
+
+
+    <script src="{{ url_for('static', filename='js/img_canje_ocr.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/canje_prov_muni.js') }}" defer></script>
+
+{% endblock %}
