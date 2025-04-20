@@ -6,6 +6,8 @@ from PIL import Image, ImageEnhance
 from passporteye import read_mrz  
 import base64
 import json
+import smtplib
+from email.mime.text import MIMEText
 
 # Importa tu conexión a la base de datos y modelos si los tienes
 from .canje_modelos import Provincia, Municipio, Canje
@@ -959,5 +961,53 @@ def buscar_registro():
         tramite_id = request.form.get('tramite_id')
         return redirect(url_for('ver_registro', tramite_id=tramite_id))
     return render_template('buscar_registro.html')
+
+@canje_bp.route('/procesar_y_enviar_mail/<int:canje_id>', methods=['POST'])
+def procesar_y_enviar_mail(canje_id):
+    try:
+        data = request.get_json()
+        send_from_label = data.get('send_from')
+        additional_text = data.get('additional_text', '')
+
+        # 1. Obtener el registro de DatosDeCanje
+        datos_canje = DatosDeCanje.query.get_or_404(canje_id)
+
+        # 2. Obtener el municipio y su correo electrónico
+        municipio = Municipio.query.get_or_404(datos_canje.municipio_id)
+        send_to_email = municipio.mail_institucional
+
+        # 3. Obtener la cuenta de envío desde la configuración
+        mail_account_config = current_app.config['MAIL_ACCOUNTS'].get(send_from_label)
+        if not mail_account_config:
+            return jsonify({'error': 'Cuenta de envío no válida'}), 400
+
+        send_from_email = mail_account_config['email']
+        send_from_password = mail_account_config['password']
+
+        # 4. Crear el cuerpo del correo electrónico
+        subject = "Transacción aprobada lista para procesar"
+        body = f"Ya puede procesar la transacción solicitada por {datos_canje.nombre} {datos_canje.apellido}, DNI {datos_canje.dni} para el día de hoy.\n\n"
+        if additional_text:
+            body += "Datos adicionales:\n" + additional_text
+
+        msg = MIMEText(body)
+        msg['Subject'] = subject
+        msg['From'] = send_from_email
+        msg['To'] = send_to_email
+
+        # 5. Enviar el correo electrónico usando SMTP (Outlook)
+        try:
+            with smtplib.SMTP('smtp.office365.com', 587) as server:
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                server.login(send_from_email, send_from_password)
+                server.sendmail(send_from_email, [send_to_email], msg.as_string())
+            return jsonify({'success': 'Correo electrónico enviado correctamente'}), 200
+        except Exception as e:
+            return jsonify({'error': f'Error al enviar el correo electrónico: {str(e)}'}), 500
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # *** IMPORTANTE: NO DEBES TENER app = Flask(__name__) NI app.run() AQUÍ ***

@@ -167,6 +167,24 @@
         </div>
     </div>
 
+    <div id="modal-enviar-correo" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="cerrar-modal">&times;</span>
+            <h3>Enviar Correo de Procesamiento</h3>
+            <form id="form-enviar-correo">
+                <label for="cuenta-envio">Enviar desde:</label>
+                <select id="cuenta-envio" name="send_from">
+                    <option value="mesa_entradas">Mesa de Entradas</option>
+                    <option value="licencias">Departamento de Licencias</option>
+                    </select>
+                <label for="texto-adicional">Texto Adicional:</label>
+                <textarea id="texto-adicional" name="additional_text"></textarea>
+                <button type="button" id="enviar-correo-btn">Enviar</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/correoOK.js') }}"></script>
     <script>
         function cargarDatos() {
             fetch('/canje/obtener_datos_canje') // Reemplaza con la ruta correcta de tu API
@@ -213,7 +231,8 @@
                     <div class="botones-accion">
                         <button class="cancelar-btn" onclick="cancelarRegistro(${row.id})">Cancelar</button>
                         <button class="ver-btn" onclick="verDetalle(${row.id})">Ver</button>
-                        <button class="procesado-btn" onclick="marcarProcesado(${row.id})">Procesado</button>
+                        <!--<button class="procesado-btn" onclick="marcarProcesado(${row.id})">Procesado</button>-->
+                        <button class="procesado-btn" onclick="mostrarModalProcesado(${row.id})">Procesado</button>
                     </div>
                 `;
                 // Agrega más celdas según las columnas que selecciones en tu backend
@@ -245,6 +264,27 @@
             // Aquí puedes agregar la lógica para enviar una petición al servidor para marcar el registro como procesado
             console.log(`Marcar como procesado el registro con ID: ${id}`);
         }        
+
+        function mostrarModalProcesado(id) {
+            const modal = document.getElementById('modal-enviar-correo');
+            let enviarBtn = document.getElementById('enviar-correo-btn');
+        
+            // Intentar obtener el botón hasta por 1 segundo (en intervalos de 100ms)
+            let attempts = 0;
+            const intervalId = setInterval(() => {
+                enviarBtn = document.getElementById('enviar-correo-btn');
+                attempts++;
+                if (enviarBtn || attempts >= 10) { // Si se encuentra o después de 10 intentos
+                    clearInterval(intervalId);
+                    if (enviarBtn) {
+                        enviarBtn.dataset.canjeId = id;
+                        modal.style.display = 'block';
+                    } else {
+                        console.error('Error: El botón enviar-correo-btn no se encontró en el DOM después de varios intentos.');
+                    }
+                }
+            }, 100);
+        }
 
         function actualizarTotales(totales) { // Ahora recibe el objeto de totales
             document.getElementById('total-tramites').textContent = totales.total_tramites;

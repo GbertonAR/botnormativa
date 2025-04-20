@@ -65,7 +65,7 @@
             <button id="certificado_curso_button" class="scan-button rojo" onclick="triggerUpload('certificado_curso')">Certificado Curso</button>
             <button id="licencia_linti_button" class="scan-button rojo" onclick="triggerUpload('licencia_linti')">Licencia Linti</button>
             <button id="certificado_legalidad_button" class="scan-button rojo" onclick="triggerUpload('certificado_legalidad')">Certificado Legalidad</button>
-            <button type="button" onclick="procesarDocumentos()">Procesar Documentos</button>
+            <button type="button" id="procesar_documentos_button" onclick="procesarDocumentos()">Procesar Documentos</button>
         </div>
         <div class="preview-container">
             <strong>Frente DNI</strong>
@@ -391,6 +391,9 @@
             });
         }        
     </script>
-    <script src="{{ url_for('static', filename='js/canje_ocr.js') }}" defer></script>
+    <!--
+    <script src="{{ url_for('static', filename='js/manager_form.js') }}" defer></script>
+    -->
+    <script src="{{ url_for('static', filename='js/canje_ocr.js') }}"></script>
     <script src="{{ url_for('static', filename='js/canje_prov_muni.js') }}" defer></script>
 {% endblock %}
