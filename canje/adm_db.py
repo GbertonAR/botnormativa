@@ -3,6 +3,8 @@ from datetime import date
 import qrcode
 from io import BytesIO
 import base64
+import json
+#import psycopg2
 
 DATABASE = 'canje/canje_db.db'
 
@@ -57,6 +59,8 @@ def close_db(conn):
 
 def insertar_datos_canje(data):
     print("Datos recibidos para insertar en la DB:", data)
+    for key, value in data.items():
+        print(f"  {key}: {value}")
     conn = get_db()
     cursor = conn.cursor()
     hoy = date.today().isoformat()
@@ -115,6 +119,40 @@ def insertar_datos_canje(data):
 
         print(datos_qr)
 
+        # sql_insert = """
+        #     INSERT INTO DatosDeCanje (
+        #         fecha_ingreso, estado, dni, apellido, nombre,
+        #         psicofisico_apellido, psicofisico_nombre, psicofisico_categoria,
+        #         psicofisico_f_examen, psicofisico_f_dictamen, psicofisico_dni, psicofisico_imagen,
+        #         curso_nombre, curso_apellido, curso_dni, curso_imagen,
+        #         legalidad_nombre, legalidad_apellido, legalidad_dni, legalidad_imagen,
+        #         provincia_id, municipio_id, ciudadano_presencial,
+        #         frente_dni_imagen, dorso_dni_imagen, licencia_frente_imagen,
+        #         licencia_dorso_imagen, linti_imagen, curso_certificado_imagen,
+        #         psicofisico_certificado_imagen, legalidad_certificado_imagen,
+        #         numero_de_tramite, imagen_qr, linti_nombre, linti_apellido, linti_dni, linti_f_vto, linti_categoria
+        #     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        # """
+
+        # print(json.dumps(data, indent=4))
+        
+        # data_tuple = (
+        #     hoy, 'Ingresado', data.get('dni'), data.get('apellido'), data.get('nombre'),
+        #     data.get('psicofisico_apellido'), data.get('psicofisico_nombre'), data.get('psicofisico_categoria'),
+        #     data.get('psicofisico_f_examen'), data.get('psicofisico_f_dictamen'), data.get('psicofisico_dni'), data.get('psicofisico_imagen'),
+        #     data.get('curso_nombre'), data.get('curso_apellido'), data.get('curso_dni'), data.get('curso_imagen'),
+        #     data.get('legalidad_nombre'), data.get('legalidad_apellido'), data.get('legalidad_dni'), data.get('legalidad_imagen'),
+        #     int(data.get('provincia_id')), int(data.get('municipio_id')), data.get('ciudadano_presente'),
+        #     data.get('frente_dni_imagen'), data.get('dorso_dni_imagen'), data.get('licencia_frente_imagen'),
+        #     data.get('licencia_dorso_imagen'), data.get('linti_imagen'), data.get('curso_certificado_imagen'),
+        #     data.get('psicofisico_certificado_imagen'), data.get('legalidad_certificado_imagen'),
+        #     numero_de_tramite, datos_qr,
+        #     data.get('linti_nombre'), data.get('linti_apellido'), data.get('linti_dni'), data.get('linti_f_vto'), data.get('linti_categoria')
+        # )
+
+        # cursor.execute(sql_insert, data_tuple)
+        # conn.commit()
+        # return True, numero_de_tramite
         sql_insert = """
             INSERT INTO DatosDeCanje (
                 fecha_ingreso, estado, dni, apellido, nombre,
@@ -125,28 +163,70 @@ def insertar_datos_canje(data):
                 provincia_id, municipio_id, ciudadano_presencial,
                 frente_dni_imagen, dorso_dni_imagen, licencia_frente_imagen,
                 licencia_dorso_imagen, linti_imagen, curso_certificado_imagen,
-                psicofisico_certificado_imagen, legalidad_certificado_imagen,
-                numero_de_tramite, imagen_qr
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                psicofisico_prestador, legalidad_certificado_imagen,
+                numero_de_tramite, imagen_qr, fecha_no_presencial, solicita_licencia_extendida,
+                linti_nombre, linti_apellido, linti_dni, linti_f_vto, linti_categoria
+            ) VALUES (
+                :fecha_ingreso, :estado, :dni, :apellido, :nombre,
+                :psicofisico_apellido, :psicofisico_nombre, :psicofisico_categoria,
+                :psicofisico_f_examen, :psicofisico_f_dictamen, :psicofisico_dni, :psicofisico_imagen,
+                :curso_nombre, :curso_apellido, :curso_dni, :curso_imagen,
+                :legalidad_nombre, :legalidad_apellido, :legalidad_dni, :legalidad_imagen,
+                :provincia_id, :municipio_id, :ciudadano_presencial,
+                :frente_dni_imagen, :dorso_dni_imagen, :licencia_frente_imagen,
+                :licencia_dorso_imagen, :linti_imagen, :curso_certificado_imagen,
+                :psicofisico_prestador, :legalidad_certificado_imagen,
+                :numero_de_tramite, :imagen_qr, :fecha_no_presencial, :solicita_licencia_extendida,
+                :linti_nombre, :linti_apellido, :linti_dni, :linti_f_vto, :linti_categoria
+            )
         """
 
-        data_tuple = (
-            hoy, 'Ingresado', data.get('dni'), data.get('apellido'), data.get('nombre'),
-            data.get('psicofisico_apellido'), data.get('psicofisico_nombre'), data.get('psicofisico_categoria'),
-            data.get('psicofisico_f_examen'), data.get('psicofisico_f_dictamen'), data.get('psicofisico_dni'), data.get('psicofisico_imagen'),
-            data.get('curso_nombre'), data.get('curso_apellido'), data.get('curso_dni'), data.get('curso_imagen'),
-            data.get('legalidad_nombre'), data.get('legalidad_apellido'), data.get('legalidad_dni'), data.get('legalidad_imagen'),
-            int(data.get('provincia_id')), int(data.get('municipio_id')), data.get('ciudadano_presente'),
-            data.get('frente_dni_imagen'), data.get('dorso_dni_imagen'), data.get('licencia_frente_imagen'),
-            data.get('licencia_dorso_imagen'), data.get('linti_imagen'), data.get('curso_certificado_imagen'),
-            data.get('psicofisico_certificado_imagen'), data.get('legalidad_certificado_imagen'),
-            numero_de_tramite, datos_qr
-        )
-
-        cursor.execute(sql_insert, data_tuple)
+        data_insert = {
+            "fecha_ingreso": hoy,
+            "estado": 'Ingresado',
+            "dni": data.get('dni'),
+            "apellido": data.get('apellido'),
+            "nombre": data.get('nombre'),
+            "psicofisico_apellido": data.get('psicofisico_apellido'),
+            "psicofisico_nombre": data.get('psicofisico_nombre'),
+            "psicofisico_categoria": data.get('psicofisico_categoria'),
+            "psicofisico_f_examen": data.get('psicofisico_f_examen'),
+            "psicofisico_f_dictamen": data.get('psicofisico_f_dictamen'),
+            "psicofisico_dni": data.get('psicofisico_dni'),
+            "psicofisico_imagen": data.get('psicofisico_certificado_imagen'),
+            "curso_nombre": data.get('curso_nombre'),
+            "curso_apellido": data.get('curso_apellido'),
+            "curso_dni": data.get('curso_dni'),
+            "curso_imagen": data.get('curso_imagen'),
+            "legalidad_nombre": data.get('legalidad_nombre'),
+            "legalidad_apellido": data.get('legalidad_apellido'),
+            "legalidad_dni": data.get('legalidad_dni'),
+            "legalidad_imagen": data.get('legalidad_imagen'),
+            "provincia_id": int(data.get('provincia_id')),
+            "municipio_id": int(data.get('municipio_id')),
+            "ciudadano_presencial": data.get('ciudadano_presente'),
+            "frente_dni_imagen": data.get('frente_dni_imagen'),
+            "dorso_dni_imagen": data.get('dorso_dni_imagen'),
+            "licencia_frente_imagen": data.get('licencia_frente_imagen'),
+            "licencia_dorso_imagen": data.get('licencia_dorso_imagen'),
+            "linti_imagen": data.get('linti_imagen'),
+            "curso_certificado_imagen": data.get('curso_certificado_imagen'),
+            "psicofisico_prestador": data.get('psicofisico_prestador'),
+            "legalidad_certificado_imagen": data.get('legalidad_certificado_imagen'),
+            "numero_de_tramite": numero_de_tramite,
+            "imagen_qr": datos_qr,
+            "fecha_no_presencial": data.get('fecha_pactada'),
+            "solicita_licencia_extendida": data.get('extendida'),
+            "linti_nombre": data.get('linti_nombre'),
+            "linti_apellido": data.get('linti_apellido'),
+            "linti_dni": data.get('linti_dni'),
+            "linti_f_vto": data.get('linti_f_vto'),
+            "linti_categoria": data.get('linti_categoria')
+        }
+        print(f"Datos a insertar: {json.dumps(data_insert, indent=4)}")
+        cursor.execute(sql_insert, data_insert)
         conn.commit()
         return True, numero_de_tramite
-
     except conn.Error as e:
         if conn:
             conn.rollback()

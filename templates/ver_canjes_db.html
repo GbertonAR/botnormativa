@@ -221,12 +221,17 @@
         }
 
         function verDetalle(id) {
-            const ancho = 600;
-            const alto = 400;
-            const izquierda = (screen.width - ancho) / 2;
-            const arriba = (screen.height - alto) / 2;
+            //const ancho = 600;
+            //const alto = 400;
+            //const izquierda = (screen.width - ancho) / 2;
+            //const arriba = (screen.height - alto) / 2;
+            const ancho = screen.width;
+            const alto = screen.height;
+            const izquierda = 0; // La ventana comenzará en el borde izquierdo
+            const arriba = 0;   // La ventana comenzará en el borde superior
         
             window.open(`/canje/detalle/${id}`, '_blank', `width=${ancho},height=${alto},left=${izquierda},top=${arriba},menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes`);
+            //window.open(`/canje/detalle/${id}`, '_blank', `menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes`);
         }
 
         function cancelarRegistro(id) {

@@ -1,21 +1,168 @@
-{% extends 'canje_base.html' %}
-
-{% block title %}Detalle de Canje{% endblock %}
-
+<head>
+    <title>{% block title %}{% endblock %}</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/canje.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/detalle_ver.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.11.9/dist/sweetalert2.min.css">
+    <!--
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/canje.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/soporte.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/contacto.css') }}">
+    -->
+</head>
+   
 {% block content %}
     <h1>Detalle del Registro de Canje</h1>
     {% if registro %}
-        <p><strong>ID:</strong> {{ registro.id }}</p>
-        <p><strong>Ciudadano Presencial:</strong> {{ registro.ciudadano_presencial }}</p>
-        <p><strong>Fecha Ingreso:</strong> {{ registro.fecha_ingreso }}</p>
-        <p><strong>Estado:</strong> {{ registro.estado }}</p>
-        <p><strong>Provincia:</strong> {{ registro.nombre_provincia }}</p>
-        <p><strong>Municipio:</strong> {{ registro.nombre_municipio }}</p>
-        <p><strong>DNI:</strong> {{ registro.dni }}</p>
-        <p><strong>Apellido:</strong> {{ registro.apellido }}</p>
-        <p><strong>Nombre:</strong> {{ registro.nombre }}</p>
-        <button onclick="window.close()">Cerrar</button>
+        <div style="display: flex; flex-direction: row; gap: 20px; margin-bottom: 20px;">
+            <div><strong>Ciudadano Presencial:</strong> {{ registro.ciudadano_presencial }}</div>
+            <div><strong>Fecha Ingreso:</strong> {{ registro.fecha_ingreso }}</div>
+            <div><strong>Provincia:</strong> {{ registro.nombre_provincia }}</div>
+            <div><strong>Municipio:</strong> {{ registro.nombre_municipio }}</div>
+            <div><strong>Extendida:</strong> {{ registro.solicita_licencia_extendida }}</div>
+        </div>
+
+        <div style="display: flex; flex-direction: row; gap: 20px; margin-bottom: 20px;">
+            <div><strong>Fecha Pactada:</strong> {{ registro.fecha_no_presencial }}</div>
+        </div>
+
+
+        <div class="document-buttons-container">
+            <div class="document-box-container">
+                <div class="document-box">
+                    <strong>DNI</strong>
+                    <p><strong>DNI (Extraído):</strong> {{ registro.dni }}</p>
+                    <p><strong>Apellido (Extraído):</strong> {{ registro.apellido }}</p>
+                    <p><strong>Nombre (Extraído):</strong> {{ registro.nombre }}</p>
+                    <div class="document-legend">Pase para ver texto</div>
+                </div>
+            </div>
+
+            <div class="document-box-container">
+                <div class="document-box">
+                    <strong>Licencia Municipal</strong>
+                    <p><strong>Frente:</strong> {{ registro.licencia_municipal_frente_data }}</p>
+                    <p><strong>Dorso:</strong> {{ registro.licencia_municipal_dorso_data }}</p>
+                    <div class="document-legend">Pase para ver texto</div>
+                </div>
+            </div>
+
+            <div class="document-box-container">
+                <div class="document-box">
+                    <strong>Psicofísico</strong>
+                    <p><strong>Nombre (Extraído):</strong> {{ registro.psicofisico_nombre }}</p>
+                    <p><strong>Apellido (Extraído):</strong> {{ registro.psicofisico_apellido }}</p>
+                    <p><strong>DNI (Extraído):</strong> {{ registro.psicofisico_dni }}</p>
+                    <p><strong>F. Examen (Extraído):</strong> {{ registro.psicofisico_f_examen }}</p>
+                    <p>{{ registro.psicofisico_imagen }}</p>
+                    <div class="document-legend">Pase para ver texto</div>
+                </div>
+            </div>
+
+            <div class="document-box-container">
+                <div class="document-box">
+                    <strong>Curso</strong>
+                    <p>{{ registro.curso_imagen }}</p>
+                    <div class="document-legend">Pase para ver texto</div>
+                </div>
+            </div>
+
+            <div class="document-box-container">
+                <div class="document-box">
+                    <strong>LINTI</strong>
+                    <p><strong>Nombre (Extraído):</strong> {{ registro.linti_nombre }}</p>
+                    <p><strong>Apellido (Extraído):</strong> {{ registro.linti_apellido }}</p>
+                    <p><strong>DNI (Extraído):</strong> {{ registro.linti_dni }}</p>
+                    <p>{{ registro.licencia_linti_data }}</p>
+                    <div class="document-legend">Pase para ver texto</div>
+                </div>
+            </div>
+
+            <div class="document-box-container">
+                <div class="document-box">
+                    <strong>Legalidad</strong>
+                    <p>{{ registro.legalidad_imagen }}</p>
+                    <div class="document-legend">Pase para ver texto</div>
+                </div>
+            </div>
+
+        </div>
+
+        <div style="margin-top: 20px;">
+            <p><strong>Estado:</strong> {{ registro.estado }}</p>
+            <button onclick="window.close()">Cerrar</button>
+        </div>
     {% else %}
         <p>Registro no encontrado.</p>
+    {% endif %}
+
+    {% if registro %}
+        <div id="tooltip-data" style="display: none;">
+            <div data-target="licencia_municipal">
+                <strong>Licencia Municipal Frente (Imagen):</strong> {{ registro.licencia_municipal_frente_data }}
+                <strong>Licencia Municipal Dorso (Imagen):</strong> {{ registro.licencia_municipal_dorso_data }}
+            </div>
+            <div data-target="psicofisico">
+                <strong>Psicofísico (Imagen):</strong> {{ registro.psicofisico_certificado_imagen }}
+            </div>
+            <div data-target="curso">
+                <strong>Curso (Imagen):</strong> {{ registro.curso_certificado_imagen }}
+            </div>
+            <div data-target="linti">
+                <strong>LINTI (Imagen):</strong> {{ registro.linti_imagen }}
+            </div>
+            <div data-target="legalidad">
+                <strong>Legalidad (Imagen):</strong> {{ registro.legalidad_certificado_imagen }}
+            </div>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const documentBoxContainers = document.querySelectorAll('.document-box-container');
+                const tooltipContainer = document.createElement('div');
+                tooltipContainer.classList.add('tooltip-container');
+                document.body.appendChild(tooltipContainer);
+                const tooltipData = document.getElementById('tooltip-data');
+
+                documentBoxContainers.forEach(container => {
+                    const documentLegend = container.querySelector('.document-legend');
+                    let enableTooltip = false;
+                    if (documentLegend && documentLegend.textContent === 'Pase para ver texto') {
+                        enableTooltip = true;
+                    }
+
+                    const documentType = container.querySelector('strong').textContent.toLowerCase();
+                    let relevantData = '';
+
+                    if (tooltipData) {
+                        const dataDiv = tooltipData.querySelector(`[data-target="${documentType}"]`);
+                        if (dataDiv && dataDiv.innerHTML.trim() !== '') {
+                            relevantData = dataDiv.innerHTML;
+                        }
+                    }
+
+                    container.addEventListener('mouseover', (event) => {
+                        if (enableTooltip && relevantData) {
+                            tooltipContainer.innerHTML = relevantData;
+                            tooltipContainer.style.opacity = 1;
+                            tooltipContainer.style.visibility = 'visible';
+                            tooltipContainer.style.left = (event.clientX + 10) + 'px';
+                            tooltipContainer.style.top = (event.clientY + 10) + 'px';
+                        }
+                    });
+
+                    container.addEventListener('mousemove', (event) => {
+                        if (enableTooltip && relevantData) {
+                            tooltipContainer.style.left = (event.clientX + 10) + 'px';
+                            tooltipContainer.style.top = (event.clientY + 10) + 'px';
+                        }
+                    });
+
+                    container.addEventListener('mouseout', () => {
+                        tooltipContainer.style.opacity = 0;
+                        tooltipContainer.style.visibility = 'hidden';
+                    });
+                });
+            });
+        </script>
     {% endif %}
 {% endblock %}

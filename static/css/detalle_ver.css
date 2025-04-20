@@ -1,0 +1,105 @@
+body {
+    /* ... otros estilos ... */
+    overflow-x: auto; /* Permite el scroll horizontal si el contenido es ancho */
+}
+.document-buttons-container { /* Un contenedor para los cajones */
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap; /* Permite que los elementos pasen a la siguiente línea si no hay suficiente espacio */
+    gap: 10px; /* Reduje el gap para ahorrar espacio */
+   /* overflow-x: auto;  Permite el scroll horizontal dentro de los cajones */
+    margin-bottom: 20px; /* Margen inferior */
+}
+
+.document-box {
+    border: 1px solid #ccc;
+    padding: 10px;
+    /* Para que quepan tres cajones por línea (con un gap de 10px entre ellos) */
+    width: calc(33.33% - 10px - (20px / 3)); /* Ancho aproximado considerando el gap del contenedor */
+    min-width: 150px; /* Ancho mínimo para evitar que se compriman demasiado */
+    box-sizing: border-box; /* Incluye el padding y el border en el cálculo del ancho */
+    text-align: left;
+
+}
+
+
+.document-box strong {
+    display: block; /* Hace que el título del cajón ocupe una línea completa */
+    margin-bottom: 5px;
+}
+
+
+/* Opcional: Para pantallas más pequeñas, podrías volver a una columna */
+@media (max-width: 768px) {
+    .document-box {
+        width: calc(50% - 10px); /* Dos cajones por línea en pantallas medianas */
+    }
+}
+
+@media (max-width: 500px) {
+    .document-box {
+        width: 100%; /* Un cajón por línea en pantallas pequeñas */
+    }
+}
+
+/*
+.document-buttons-container {
+    display: flex;
+    flex-direction: column; /* Apilar las filas verticalmente 
+    gap: 20px; /* Espacio entre las filas 
+}
+*/
+.row {
+    display: flex;
+    gap: 20px; /* Espacio entre las cajas en la misma fila */
+    /*justify-content: space-around; /* Distribuye el espacio alrededor de las cajas */
+}
+
+.document-box-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centrar la leyenda debajo de la caja */
+    position: relative; /* Necesario para posicionar el tooltip relativamente */
+    flex-basis: calc(33.33% - 40px / 3); /* Aproximadamente un tercio del ancho con ajuste para el gap */
+}
+
+.document-box {
+    border: 1px solid #ccc;
+    padding: 15px;
+    border-radius: 5px;
+    text-align: center;
+    min-width: 200px; /* Asegura un ancho mínimo */
+    cursor: help; /* Indica que hay información al pasar el mouse */
+    width: 100%; /* Ocupa todo el ancho disponible en su contenedor */
+}
+
+.document-legend {
+    margin-top: 5px;
+    font-size: 0.8em;
+    color: #777;
+}
+
+/* Estilos para el tooltip (inicialmente oculto) */
+.tooltip-container {
+    position: absolute;
+    z-index: 1000;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 0.9em;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease-in-out;
+    bottom: calc(100% + 10px); /* Mostrarlo encima de la caja */
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: pre-wrap; /* Conservar saltos de línea */
+    text-align: left;
+    max-width: 300px; /* Evita que el tooltip sea demasiado ancho */
+}
+
+.document-box-container:hover .tooltip-container {
+    opacity: 1;
+    visibility: visible;
+}

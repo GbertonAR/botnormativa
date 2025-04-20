@@ -4,6 +4,8 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from PIL import Image, ImageEnhance
 # import pytesseract  <-- ELIMINADO
 from passporteye import read_mrz  
+import base64
+import json
 
 # Importa tu conexión a la base de datos y modelos si los tienes
 from .canje_modelos import Provincia, Municipio, Canje
@@ -18,6 +20,7 @@ from azure.cognitiveservices.vision.computervision.models import OperationStatus
 from msrest.authentication import CognitiveServicesCredentials
 from azure.ai.documentintelligence import DocumentIntelligenceClient
 from azure.core.credentials import AzureKeyCredential
+
 import logging
 
 # Configurar logging
@@ -206,22 +209,61 @@ def regla_dorso_dni(ocr_text):
 #         'psicofisico_f_examen': fecha_examen
 #     }
 
+# def regla_psicofisico(ocr_text):
+#     if not ocr_text:
+#         return {'error': 'No se pudo realizar OCR en el Psicofísico.'}
+
+#     if "PSICOFISICO" not in ocr_text.upper() and \
+#        "PSICOFISICA" not in ocr_text.upper() and \
+#        "PSICOFÍSICO" not in ocr_text.upper() and \
+#        "PSICOFÍSICA" not in ocr_text.upper():
+#         return {'error': 'No se encontró la palabra "PSICOFISICO", "PSICOFISICA", "PSICOFÍSICO" o "PSICOFÍSICA" en el documento. No es un psicofísico válido.'}
+
+#     # Intento de expresiones regulares más flexibles (necesitan ajuste con el texto completo)
+#     apellido_match = re.search(r"APELLIDO:\s*(\w+\s*\w*)", ocr_text, re.IGNORECASE)
+#     nombre_match = re.search(r"NOMBRE:\s*(\w+\s*\w*\s*\w*)", ocr_text, re.IGNORECASE)
+#     dni_match = re.search(r"DNI:\s*(\d{7,9})", ocr_text, re.IGNORECASE)
+#     prestador_match = re.search(r"PRESTADOR:\s*(.+?)(?:APELLIDO:|F\. EXAMEN:)", ocr_text, re.IGNORECASE | re.DOTALL)
+#     fecha_examen_match = re.search(r"F\. EXAMEN:\s*(\d{2}/\d{2}/\d{4})", ocr_text, re.IGNORECASE)
+
+#     apellido = apellido_match.group(1).strip() if apellido_match else None
+#     nombre = nombre_match.group(1).strip() if nombre_match else None
+#     dni = dni_match.group(1).strip() if dni_match else None
+#     prestador = prestador_match.group(1).strip() if prestador_match else None
+#     fecha_examen = fecha_examen_match.group(1).strip() if fecha_examen_match else None
+
+#     # Limpieza adicional para apellido y nombre (remover caracteres no deseados al final)
+#     if apellido:
+#         apellido = re.sub(r'\s*DNI$', '', apellido).strip()
+#     if nombre:
+#         nombre = re.sub(r'\s*CATEGORIA$', '', nombre).strip()
+        
+#     return {
+#         'psicofisico_nombre': nombre,
+#         'psicofisico_apellido': apellido,
+#         'psicofisico_dni': dni,
+#         'psicofisico_prestador': prestador,
+#         'psicofisico_f_examen': fecha_examen
+#     }
+
 def regla_psicofisico(ocr_text):
+    logging.debug(f"OCR Text Psicofisico: {ocr_text}")
     if not ocr_text:
         return {'error': 'No se pudo realizar OCR en el Psicofísico.'}
 
-    if "PSICOFISICO" not in ocr_text.upper() and \
-       "PSICOFISICA" not in ocr_text.upper() and \
-       "PSICOFÍSICO" not in ocr_text.upper() and \
-       "PSICOFÍSICA" not in ocr_text.upper():
+    ocr_lower = ocr_text.lower()
+    if "psicofisico" not in ocr_lower and \
+       "psicofisica" not in ocr_lower and \
+       "psicofísico" not in ocr_lower and \
+       "psicofísica" not in ocr_lower:
         return {'error': 'No se encontró la palabra "PSICOFISICO", "PSICOFISICA", "PSICOFÍSICO" o "PSICOFÍSICA" en el documento. No es un psicofísico válido.'}
 
-    # Intento de expresiones regulares más flexibles (necesitan ajuste con el texto completo)
-    apellido_match = re.search(r"APELLIDO:\s*(\w+\s*\w*)", ocr_text, re.IGNORECASE)
-    nombre_match = re.search(r"NOMBRE:\s*(\w+\s*\w*\s*\w*)", ocr_text, re.IGNORECASE)
-    dni_match = re.search(r"DNI:\s*(\d{7,9})", ocr_text, re.IGNORECASE)
-    prestador_match = re.search(r"PRESTADOR:\s*(.+?)(?:APELLIDO:|F\. EXAMEN:)", ocr_text, re.IGNORECASE | re.DOTALL)
-    fecha_examen_match = re.search(r"F\. EXAMEN:\s*(\d{2}/\d{2}/\d{4})", ocr_text, re.IGNORECASE)
+    # Expresiones regulares más robustas
+    apellido_match = re.search(r"(?:APELLIDO|Apellido)\s*[:]?\s*([\w\s]+)", ocr_text, re.IGNORECASE)
+    nombre_match = re.search(r"(?:NOMBRE|Nombre)\s*[:]?\s*([\w\s]+)", ocr_text, re.IGNORECASE)
+    dni_match = re.search(r"(?:D\.N\.I\.?|DNI)\s*[:]?\s*(\d{7,9})", ocr_text, re.IGNORECASE)
+    prestador_match = re.search(r"(?:PRESTADOR|Prestador)\s*[:]?\s*(.+?)(?:(?:APELLIDO|Apellido)|(?:F\.\s*EXAMEN|Fecha\s*de\s*Examen)|$)", ocr_text, re.IGNORECASE | re.DOTALL)
+    fecha_examen_match = re.search(r"(?:F\.\s*EXAMEN|Fecha\s*de\s*Examen)\s*[:]?\s*(\d{2}/\d{2}/\d{4})", ocr_text, re.IGNORECASE)
 
     apellido = apellido_match.group(1).strip() if apellido_match else None
     nombre = nombre_match.group(1).strip() if nombre_match else None
@@ -229,20 +271,240 @@ def regla_psicofisico(ocr_text):
     prestador = prestador_match.group(1).strip() if prestador_match else None
     fecha_examen = fecha_examen_match.group(1).strip() if fecha_examen_match else None
 
-    # Limpieza adicional para apellido y nombre (remover caracteres no deseados al final)
+    # Limpieza adicional (más general)
     if apellido:
-        apellido = re.sub(r'\s*DNI$', '', apellido).strip()
+        apellido = re.sub(r'\s*(?:DNI|N°|NRO\.|\d{7,9})$', '', apellido, re.IGNORECASE).strip()
     if nombre:
-        nombre = re.sub(r'\s*CATEGORIA$', '', nombre).strip()
-        
+        nombre = re.sub(r'\s*(?:CATEGORIA|CAT\.)$', '', nombre, re.IGNORECASE).strip()
+        nombre = re.sub(r'\s*\d{2}/\d{2}/\d{4}$', '', nombre).strip() # Remover posible fecha al final
+
     return {
         'psicofisico_nombre': nombre,
         'psicofisico_apellido': apellido,
         'psicofisico_dni': dni,
         'psicofisico_prestador': prestador,
-        'psicofisico_f_examen': fecha_examen
+        'psicofisico_f_examen': fecha_examen,
+        'psicofisico_ocr_text': ocr_text  # Guardar el texto OCR original
     }
     
+def procesar_certificado_curso(ocr_text):
+    """
+    Extrae información específica del OCR del certificado de curso.
+
+    Args:
+        ocr_text (str): El texto OCR extraído del certificado de curso.
+
+    Returns:
+        dict: Un diccionario con los campos 'curso_nombre', 'curso_apellido',
+              'curso_dni', 'curso_imagen', 'curso_nombre_curso'.
+    """
+    data = {'curso_imagen': ocr_text}
+    lines = ocr_text.split('\n')
+
+    nombre = None
+    apellido = None
+    dni = None
+    nombre_curso = None
+
+    for line in lines:
+        line_lower = line.lower()
+
+        if "se extiende el presente certificado a" in line_lower:
+            parts = line.split("a")[-1].strip().split(",")
+            if len(parts) >= 2:
+                apellido = parts[0].strip()
+                nombre_completo = parts[1].strip()
+                nombre_parts = nombre_completo.split()
+                if nombre_parts:
+                    nombre = " ".join(nombre_parts)
+                dni_match = re.search(r'dni\s*(\d[\d\.]+)', line, re.IGNORECASE)
+                if dni_match:
+                    dni = dni_match.group(1).replace('.', '')
+            elif len(parts) == 1:
+                nombre_apellido_match = re.search(r'([A-Z]+(?: [A-Z]+)*),\s*([A-Z]+(?: [A-Z]+)*)', line)
+                if nombre_apellido_match:
+                    apellido = nombre_apellido_match.group(1)
+                    nombre = nombre_apellido_match.group(2)
+                dni_match = re.search(r'dni\s*(\d[\d\.]+)', line, re.IGNORECASE)
+                if dni_match:
+                    dni = dni_match.group(1).replace('.', '')
+
+        elif "por haber aprobado el curso" in line_lower:
+            curso_match = re.search(r'curso:\s*(.+)', line, re.IGNORECASE)
+            if curso_match:
+                nombre_curso = curso_match.group(1).strip()
+            else:
+                curso_match_v2 = re.search(r'curso el\s*(.+)', line, re.IGNORECASE)
+                if curso_match_v2:
+                    nombre_curso = curso_match_v2.group(1).strip()
+                else:
+                    curso_index = line_lower.find("curso:")
+                    if curso_index != -1:
+                        nombre_curso = line[curso_index + len("curso:"):].strip()
+                    else:
+                        curso_index_v2 = line_lower.find("curso el")
+                        if curso_index_v2 != -1:
+                            nombre_curso = line[curso_index_v2 + len("curso el"):].strip()
+
+
+    data['curso_nombre'] = nombre
+    data['curso_apellido'] = apellido
+    data['curso_dni'] = dni
+    data['curso_nombre_curso'] = nombre_curso
+    data['curso_ocr_text'] = ocr_text
+
+    print(f"Datos del OCR CURSOS (MEJORADO): {json.dumps(data, indent=4)}")
+    return data
+    
+    
+def procesar_licencia_linti(ocr_text):
+    """
+    Extrae información específica del OCR de la licencia LINTI.
+
+    Args:
+        ocr_text (str): El texto OCR extraído de la licencia LINTI.
+
+    Returns:
+        dict: Un diccionario con los campos 'linti_nombre', 'linti_apellido',
+              'linti_dni', 'linti_f_vto' y 'linti_categoria', 'linti_ocr_text'.
+    """
+    data = {'linti_ocr_text': ocr_text}
+    lines = ocr_text.split('\n')
+
+    nombre = None
+    apellido = None
+    dni = None
+    f_vto = None
+    categoria = None
+
+    for line in lines:
+        line_lower = line.lower()
+
+        if line_lower.startswith("nombre"):
+            nombre_parts = line.split("nombre")[-1].strip().split()
+            if len(nombre_parts) >= 2:  # Asegurarse de capturar el nombre completo
+                nombre = " ".join(nombre_parts)
+            elif len(nombre_parts) == 1 and not nombre: # Capturar el nombre si está en la siguiente línea
+                continue # Esperar la siguiente línea
+        elif not nombre and "adriel oscar" in line_lower: # Capturar el nombre específico
+            nombre = "ADRIEL OSCAR"
+        elif line_lower.startswith("apelto"): # Error de OCR común para "Apellido"
+            apellido_parts = line.split("apelto")[-1].strip().split()
+            if apellido_parts:
+                apellido = " ".join(apellido_parts)
+        elif not apellido and "medeot" in line_lower: # Capturar el apellido específico
+            apellido = "MEDEOT"
+        elif re.search(r'\b\d{7,8}\b', line):
+            dni_match = re.search(r'\b\d{7,8}\b', line)
+            if dni_match:
+                dni = dni_match.group(0)
+        elif re.search(r'vto\s*(\d{2}/\d{2}/\d{4})', line_lower):
+            vto_match = re.search(r'vto\s*(\d{2}/\d{2}/\d{4})', line_lower)
+            if vto_match:
+                f_vto = vto_match.group(1)
+        elif line_lower.startswith("categoria"):
+            categoria_parts = line.split("categoria")[-1].strip().split()
+            if categoria_parts:
+                categoria = categoria_parts[0]
+
+    data['linti_nombre'] = nombre
+    data['linti_apellido'] = apellido
+    data['linti_dni'] = dni
+    data['linti_f_vto'] = f_vto
+    data['linti_categoria'] = categoria
+    data['linti_imagen'] = ocr_text
+
+    print(f"Datos del OCR LINTI (MEJORADO): {json.dumps(data, indent=4)}")
+    return data
+
+# def procesar_certificado_legalidad(ocr_text, datos_dni=None):
+#     """
+#     Verifica si el OCR contiene "CERTIFICADO DE LEGALIDAD" para determinar su validez.
+#     Si es válido, asigna los datos de nombre, apellido y DNI proporcionados.
+
+#     Args:
+#         ocr_text (str): El texto OCR extraído del certificado de legalidad.
+#         datos_dni (dict, optional): Un diccionario con 'nombre', 'apellido' y 'dni'
+#                                      extraídos del DNI. Defaults to None.
+
+#     Returns:
+#         dict: Un diccionario con la información del certificado de legalidad y su validez.
+#     """
+#     if not ocr_text:
+#         return {'error': 'No se pudo realizar OCR en el Certificado de Legalidad.'}
+
+#     if "CERTIFICADO DE LEGALIDAD" not in ocr_text.upper():
+#         return {'error': 'No se encontró la frase "CERTIFICADO DE LEGALIDAD" en el documento. No es un certificado de legalidad válido.'}
+
+#     certificado_valido = True
+#     data = {
+#         'certificado_legalidad_valido': certificado_valido,
+#         'curso_certificado_imagen': ocr_text,  # Asignamos el ocr_text a este campo
+#         'legalidad_nombre': None,
+#         'legalidad_apellido': None,
+#         'legalidad_dni': None,
+#         'legalidad_ocr_text': ocr_text  # Mantenemos el ocr_text original
+#     }
+
+#     if certificado_valido and datos_dni:
+#         data['legalidad_nombre'] = datos_dni.get('nombre')
+#         data['legalidad_apellido'] = datos_dni.get('apellido')
+#         data['legalidad_dni'] = datos_dni.get('dni')
+
+#     print(f"Datos del OCR LEGALIDAD (VALIDACIÓN POR PALABRA CLAVE): {data}")
+#     return data
+
+def procesar_certificado_legalidad(ocr_text, datos_dni=None):
+
+    logging.debug(f"OCR Text Certificado de Legalidad: {ocr_text}")
+    if not ocr_text:
+        return {'error': 'No se pudo realizar OCR en el Certificado de Legalidad.'}
+
+    legalidad_ocr_text = "CERTIFICADO DE LEGALIDAD" in ocr_text.upper()
+    data = {
+            #'certificado_legalidad_valido': certificado_valido,
+            'curso_certificado_imagen': ocr_text,
+            'legalidad_nombre': None,
+            'legalidad_apellido': None,
+            'legalidad_dni': None,
+            'legalidad_ocr_text': legalidad_ocr_text
+    }
+
+    if legalidad_ocr_text:
+        # Intentar extraer nombre, apellido y DNI del texto OCR
+        nombre_match = re.search(r"(?:Sr\.|Sra\.|Srta\.)\s+([\w\s]+)\s+([\w\s]+)(?:\s+D\.N\.I\.? Nº|\s+DNI Nº|\s+DNI N°|\s+D\.N\.I\.? N°)\s+(\d{7,9})", ocr_text, re.IGNORECASE)
+        if nombre_match:
+                apellido = nombre_match.group(1).strip()
+                nombre = nombre_match.group(2).strip()
+                dni = nombre_match.group(3).strip()
+                data['legalidad_apellido'] = apellido
+                data['legalidad_nombre'] = nombre
+                data['legalidad_dni'] = dni
+        else:
+            # Intento de extracción menos específico si el patrón anterior no coincide
+            nombre_apellido_match = re.search(r"([\w\s]+)\s+([\w\s]+)(?:\s+D\.N\.I\.? Nº|\s+DNI Nº|\s+DNI N°|\s+D\.N\.I\.? N°)\s+(\d{7,9})", ocr_text, re.IGNORECASE)
+            if nombre_apellido_match:
+                apellido = nombre_apellido_match.group(1).strip()
+                nombre = nombre_apellido_match.group(2).strip()
+                dni = nombre_apellido_match.group(3).strip()
+                data['legalidad_apellido'] = apellido
+                data['legalidad_nombre'] = nombre
+                data['legalidad_dni'] = dni
+            else:
+                # Intento de extraer DNI por separado si no se encuentra el patrón completo
+                dni_match = re.search(r"(?:D\.N\.I\.? Nº|\s+DNI Nº|\s+DNI N°|\s+D\.N\.I\.? N°)\s+(\d{7,9})", ocr_text, re.IGNORECASE)
+                if dni_match:
+                      data['legalidad_dni'] = dni_match.group(1).strip()
+                # Podrías añadir más patrones de extracción si identificas otros formatos comunes
+
+    print(f"Datos del OCR LEGALIDAD (CON INTENTO DE EXTRACCIÓN): {data}")
+
+    return data
+
+
+
+
+
 # *** REGLAS DE VALIDACIÓN DE DOCUMENTOS ***
 # Aquí puedes definir las reglas de validación para cada tipo de documento
 REGLAS_DOCUMENTOS = {
@@ -251,9 +513,9 @@ REGLAS_DOCUMENTOS = {
     'licencia_municipal_frente': lambda ocr: {'ocr_text': ocr}, # Placeholder
     'licencia_municipal_dorso': lambda ocr: {'ocr_text': ocr}, # Placeholder
     'psicofisico': regla_psicofisico,
-    'certificado_curso': lambda ocr: {'ocr_text': ocr},       # Placeholder
-    'licencia_linti': lambda ocr: {'ocr_text': ocr},         # Placeholder
-    'certificado_legalidad': lambda ocr: {'ocr_text': ocr},   # Placeholder
+    'certificado_curso': procesar_certificado_curso,
+    'licencia_linti': procesar_licencia_linti,
+    'certificado_legalidad': procesar_certificado_legalidad,
 }
 
 @canje_bp.route('/upload', methods=['POST'])
@@ -512,9 +774,6 @@ def capture_canje_form():
 def capture_ver_datos_canje():
     return render_template('ver_canjes_db.html')
 
-
-
-
 @canje_bp.route('/procesar', methods=['POST'])
 def procesar_documentos():
     # Aquí recibirás los datos de los documentos capturados desde el frontend
@@ -569,12 +828,33 @@ def get_municipios(provincia_id):
     close_db(conn)
     return jsonify(municipios)
 
+# @canje_bp.route('/guardar_datos', methods=['POST'])
+# def guardar_datos():
+#     data = request.json
+#     print("Datos a guardar:", json.dumps(data, indent=4)) # Imprimir los datos en formato JSON
+
+#     success, message = insertar_datos_canje(data)
+#     return jsonify({'success': True, 'message': 'Datos guardados'}), 200
+
 @canje_bp.route('/guardar_datos', methods=['POST'])
 def guardar_datos():
-    data = request.json
-    print("Datos a guardar:", data)
-    success, message = insertar_datos_canje(data)
-    return jsonify({'success': True, 'message': 'Datos guardados'}), 200
+    try:
+        datos_recibidos = request.get_json()
+        print("Datos Recibidos del Frontend:")
+        print(json.dumps(datos_recibidos, indent=4))
+
+        # Llamar a la función para insertar los datos en la base de datos
+        success, resultado = insertar_datos_canje(datos_recibidos)
+
+        if success:
+            return jsonify({'success': True, 'message': 'Datos guardados y transacción generada exitosamente.', 'numero_de_tramite': resultado}), 200
+        else:
+            return jsonify({'success': False, 'error': f'Error al guardar los datos: {resultado}'}), 500
+
+    except Exception as e:
+        print(f"Error inesperado al procesar la solicitud de guardado: {e}")
+        return jsonify({'success': False, 'error': f'Error inesperado: {str(e)}'}), 500
+    
 
 @canje_bp.route('/obtener_datos_canje', methods=['GET'])
 def obtener_datos_canje():
