@@ -1,0 +1,273 @@
+<template>
+    <div class="bg-gray-100 min-h-screen py-6 px-4 sm:px-6 lg:px-8">
+      <div class="max-w-3xl mx-auto bg-white shadow-md rounded-md p-6">
+        <h1 class="text-2xl font-semibold text-gray-900 mb-4">Proceso de Canje de Documentación</h1>
+  
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div class="flex flex-col">
+            <button
+              id="frente_dni_button"
+              class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm"
+              @click="triggerUpload('frente_dni')"
+            >
+              Frente DNI
+            </button>
+          </div>
+          <div class="flex flex-col">
+            <button
+              id="dorso_dni_button"
+              class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm"
+              @click="triggerUpload('dorso_dni')"
+            >
+              Dorso DNI
+            </button>
+          </div>
+          <div class="flex flex-col">
+            <button
+              id="licencia_municipal_frente_button"
+              class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm"
+              @click="triggerUpload('licencia_municipal_frente')"
+            >
+              Lic. Municipal Frente
+            </button>
+          </div>
+          <div class="flex flex-col">
+            <button
+              id="licencia_municipal_dorso_button"
+              class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm"
+              @click="triggerUpload('licencia_municipal_dorso')"
+            >
+              Lic. Municipal Dorso
+            </button>
+          </div>
+          <div class="flex flex-col">
+            <button
+              id="psicofisico_button"
+              class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm"
+              @click="triggerUpload('psicofisico')"
+            >
+              Psicofisico
+            </button>
+          </div>
+          <div class="flex flex-col">
+            <button
+              id="certificado_curso_button"
+              class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm"
+              @click="triggerUpload('certificado_curso')"
+            >
+              Certificado Curso
+            </button>
+          </div>
+          <div class="flex flex-col">
+            <button
+              id="licencia_linti_button"
+              class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm"
+              @click="triggerUpload('licencia_linti')"
+            >
+              Licencia Linti
+            </button>
+          </div>
+          <div class="flex flex-col">
+            <button
+              id="certificado_legalidad_button"
+              class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm"
+              @click="triggerUpload('certificado_legalidad')"
+            >
+              Certificado Legalidad
+            </button>
+          </div>
+          <div class="sm:col-span-2 md:col-span-4 flex justify-center">
+            <button
+              type="button"
+              id="procesar_documentos_button"
+              class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              @click="procesarDocumentos"
+            >
+              Procesar Documentos
+            </button>
+          </div>
+        </div>
+  
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div class="flex flex-col items-center">
+            <strong class="mb-2">Frente DNI</strong>
+            <div id="preview_frente_dni" class="w-full h-40 border border-gray-300 rounded flex justify-center items-center overflow-hidden">
+              <img v-if="previews.frente_dni" :src="previews.frente_dni" class="max-w-full max-h-full" />
+            </div>
+          </div>
+          <div class="flex flex-col items-center">
+            <strong class="mb-2">Dorso DNI</strong>
+            <div id="preview_dorso_dni" class="w-full h-40 border border-gray-300 rounded flex justify-center items-center overflow-hidden">
+              <img v-if="previews.dorso_dni" :src="previews.dorso_dni" class="max-w-full max-h-full" />
+            </div>
+          </div>
+          <div class="flex flex-col items-center">
+            <strong class="mb-2">Datos DNI</strong>
+            <div id="dorso_dni_info" v-if="dniInfo" class="mt-2 p-3 border border-gray-200 rounded bg-gray-50 text-gray-800 text-left text-sm">
+              <p><strong>Nombre:</strong> <span id="nombre_leido">{{ dniInfo.nombre }}</span></p>
+              <p><strong>Apellidos:</strong> <span id="apellidos_leido">{{ dniInfo.apellidos }}</span></p>
+              <p><strong>Número:</strong> <span id="numero_documento_leido">{{ dniInfo.numero_documento }}</span></p>
+            </div>
+            <div v-else class="mt-2 p-3 border border-gray-200 rounded bg-gray-50 text-gray-800 text-sm" style="display: none;">
+              <p><strong>Nombre:</strong> <span id="nombre_leido"></span></p>
+              <p><strong>Apellidos:</strong> <span id="apellidos_leido"></span></p>
+              <p><strong>Número:</strong> <span id="numero_documento_leido"></span></p>
+            </div>
+          </div>
+          <div></div>
+  
+          <div class="flex flex-col items-center">
+            <strong class="mb-2">Licencia Municipal Frente</strong>
+            <div id="preview_licencia_municipal_frente" class="w-full h-40 border border-gray-300 rounded flex justify-center items-center overflow-hidden">
+              <img v-if="previews.licencia_municipal_frente" :src="previews.licencia_municipal_frente" class="max-w-full max-h-full" />
+            </div>
+          </div>
+          <div class="flex flex-col items-center">
+            <strong class="mb-2">Licencia Municipal Dorso</strong>
+            <div id="preview_licencia_municipal_dorso" class="w-full h-40 border border-gray-300 rounded flex justify-center items-center overflow-hidden">
+              <img v-if="previews.licencia_municipal_dorso" :src="previews.licencia_municipal_dorso" class="max-w-full max-h-full" />
+            </div>
+          </div>
+          <div class="flex flex-col items-center">
+            <strong class="mb-2">Psicofisico</strong>
+            <div id="preview_psicofisico" class="w-full h-40 border border-gray-300 rounded flex justify-center items-center overflow-hidden">
+              <img v-if="previews.psicofisico" :src="previews.psicofisico" class="max-w-full max-h-full" />
+            </div>
+          </div>
+          <div></div>
+  
+          <div class="flex flex-col items-center">
+            <strong class="mb-2">Certificado Curso</strong>
+            <div id="preview_certificado_curso" class="w-full h-40 border border-gray-300 rounded flex justify-center items-center overflow-hidden">
+              <img v-if="previews.certificado_curso" :src="previews.certificado_curso" class="max-w-full max-h-full" />
+            </div>
+          </div>
+          <div class="flex flex-col items-center">
+            <strong class="mb-2">Licencia Linti</strong>
+            <div id="preview_licencia_linti" class="w-full h-40 border border-gray-300 rounded flex justify-center items-center overflow-hidden">
+              <img v-if="previews.licencia_linti" :src="previews.licencia_linti" class="max-w-full max-h-full" />
+            </div>
+          </div>
+          <div class="flex flex-col items-center">
+            <strong class="mb-2">Certificado Legalidad</strong>
+            <div id="preview_certificado_legalidad" class="w-full h-40 border border-gray-300 rounded flex justify-center items-center overflow-hidden">
+              <img v-if="previews.certificado_legalidad" :src="previews.certificado_legalidad" class="max-w-full max-h-full" />
+            </div>
+          </div>
+          <div></div>
+        </div>
+  
+        <div class="mt-6 p-4 border border-gray-200 rounded bg-gray-50 text-gray-800">
+          <h3 class="text-lg font-semibold mb-2">Información Adicional</h3>
+          <div class="mb-2">
+            <label class="block text-gray-700 text-sm font-bold mb-2">¿El ciudadano está presente?</label>
+            <div class="flex items-center">
+              <input type="radio" id="ciudadano_presente_no" name="ciudadano_presente" value="NO" v-model="additionalData.ciudadano_presente" class="mr-2">
+              <label for="ciudadano_presente_no" class="text-sm text-gray-700 mr-4">NO</label>
+              <input type="radio" id="ciudadano_presente_si" name="ciudadano_presente" value="SI" v-model="additionalData.ciudadano_presente" class="mr-2">
+              <label for="ciudadano_presente_si" class="text-sm text-gray-700">SI</label>
+            </div>
+          </div>
+          <div class="mb-2">
+            <label for="fecha_no_presencial" class="block text-gray-700 text-sm font-bold mb-2">Fecha (en caso de no estar presente):</label>
+            <input type="date" id="fecha_no_presencial" name="fecha_no_presencial" v-model="additionalData.fecha_no_presencial" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
+          </div>
+          <div class="mb-2">
+            <label for="solicita_licencia_extendida" class="block text-gray-700 text-sm font-bold mb-2">¿Solicita Licencia Extendida?</label>
+            <select id="solicita_licencia_extendida" name="solicita_licencia_extendida" v-model="additionalData.solicita_licencia_extendida" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
+              <option value="NO">NO</option>
+              <option value="SI">SI</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label for="provincia" class="block text-gray-700 text-sm font-bold mb-2">Provincia:</label>
+            <select id="provincia" v-model="additionalData.provincia_id" @change="cargarMunicipios" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
+              <option value="">Seleccione una provincia</option>
+              <option v-for="provincia in provincias" :key="provincia.id" :value="provincia.id">{{ provincia.nombre }}</option>
+            </select>
+          </div>
+          <div class="mb-4">
+            <label for="municipio" class="block text-gray-700 text-sm font-bold mb-2">Municipio:</label>
+            <select id="municipio" v-model="additionalData.municipio_id" :disabled="!additionalData.provincia_id" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
+              <option value="">Seleccione un municipio</option>
+              <option v-for="municipio in municipios" :key="municipio.id" :value="municipio.id">{{ municipio.nombre }}</option>
+            </select>
+          </div>
+          <button
+            type="button"
+            class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            @click="enviarDatos"
+          >
+            Guardar y Generar Transacción
+          </button>
+        </div>
+  
+        <div id="qr-container" v-if="qrCode" class="mt-6 p-4 border border-gray-200 rounded bg-gray-50 text-gray-800 text-center">
+          <h3 class="text-lg font-semibold mb-2">Código de Transacción QR</h3>
+          <div id="qr-code" v-html="qrCode"></div>
+          <p id="codigo-transaccion-texto">{{ transactionCode }}</p>
+        </div>
+  
+        <form id="upload_form" method="POST" action="/canje/upload" enctype="multipart/form-data" style="display:none;">
+          <input type="file" name="document" id="document_upload" @change="handleFileUpload">
+          <input type="hidden" name="document_type" id="document_type" v-model="uploadDocumentType">
+        </form>
+      </div>
+    </div>
+  </template>
+  
+  <script>
+  import Swal from 'sweetalert2';
+  // import QRCode from 'qrcode'; // Si necesitas generar el QR en el cliente
+  
+  export default {
+    data() {
+      return {
+        previews: {
+          frente_dni: null,
+          dorso_dni: null,
+          licencia_municipal_frente: null,
+          licencia_municipal_dorso: null,
+          psicofisico: null,
+          certificado_curso: null,
+          licencia_linti: null,
+          certificado_legalidad: null,
+        },
+        dniInfo: null,
+        uploadDocumentType: null,
+        uploadedFiles: {},
+        additionalData: {
+          ciudadano_presente: 'NO',
+          fecha_no_presencial: null,
+          solicita_licencia_extendida: 'NO',
+          provincia_id: '',
+          municipio_id: '',
+        },
+        provincias: [],
+        municipios: [],
+        qrCode: null,
+        transactionCode: null,
+        datosDocumentos: {}, // Para almacenar los resultados del OCR
+      };
+    },
+    mounted() {
+      this.cargarProvincias();
+    },
+    methods: {
+      triggerUpload(documentType) {
+        this.uploadDocumentType = documentType;
+        document.getElementById('document_upload').click();
+      },
+      handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (file) {
+          this.previews[this.uploadDocumentType] = URL.createObjectURL(file);
+          this.uploadFile(file, this.uploadDocumentType);
+        }
+        // Reset the input to allow uploading the same file again
+        event.target.value = null;
+      },
+      async uploadFile(file, documentType) {
+        const formData = new FormData();
+        formData.append('document', file);
+        formData.append

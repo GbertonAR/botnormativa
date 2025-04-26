@@ -1,0 +1,61 @@
+import requests
+from flask import Blueprint, render_template, request, jsonify, url_for
+import os
+from datetime import datetime
+
+canje_bp = Blueprint('canje', __name__, template_folder='../templates', static_folder='../static', url_prefix='/canje')
+TEMP_UPLOAD_FOLDER = 'temp_uploads'
+os.makedirs(TEMP_UPLOAD_FOLDER, exist_ok=True)
+API_BASE_URL = '/api/v1'  # Ajusta según tu configuración
+
+@canje_bp.route('/upload', methods=['POST'])
+def upload_document():
+    if 'document' not in request.files:
+        return jsonify({'error': 'No se proporcionó ningún documento'}), 400
+
+    document = request.files['document']
+    document_type = request.form.get('document_type')
+
+    if document.filename == '':
+        return jsonify({'error': 'No se seleccionó ningún documento'}), 400
+
+    if document:
+        try:
+            files = {'document': (document.filename, document.stream, document.content_type)}
+            data = {'document_type': document_type}
+            response = requests.post(f'{API_BASE_URL}/process_document', files=files, data=data)
+            response.raise_for_status()  # Lanza una excepción para códigos de error HTTP
+            return jsonify(response.json())
+        except requests.exceptions.RequestException as e:
+            return jsonify({'error': f'Error al comunicarse con la API de procesamiento: {e}'}), 500
+        finally:
+            pass # Ya no guardamos el archivo localmente para procesar
+
+    return jsonify({'error': 'Error al cargar el documento'}), 500
+
+@canje_bp.route('/upload_camara', methods=['POST'])
+def upload_document_camara():
+    if 'document' not in request.files:
+        return jsonify({'error': 'No se proporcionó ningún documento'}), 400
+
+    document = request.files['document']
+    document_type = request.form.get('document_type')
+
+    if document.filename == '':
+        return jsonify({'error': 'No se seleccionó ningún documento'}), 400
+
+    if document:
+        try:
+            files = {'document': (document.filename, document.stream, document.content_type)}
+            data = {'document_type': document_type}
+            response = requests.post(f'{API_BASE_URL}/process_document', files=files, data=data)
+            response.raise_for_status()
+            return jsonify(response.json())
+        except requests.exceptions.RequestException as e:
+            return jsonify({'error': f'Error al comunicarse con la API de procesamiento: {e}'}), 500
+        finally:
+            pass
+
+    return jsonify({'error': 'Error al cargar el documento'}), 500
+
+# La ruta /procesar también debería consumir la API si decides mover toda la lógica allí.

@@ -1,16 +1,16 @@
 import os
 import re
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, current_app
 from PIL import Image, ImageEnhance
-# import pytesseract  <-- ELIMINADO
 from passporteye import read_mrz  
 import base64
 import json
 import smtplib
 from email.mime.text import MIMEText
+from .config_canje import MAIL_ACCOUNTS
 
 # Importa tu conexión a la base de datos y modelos si los tienes
-from .canje_modelos import Provincia, Municipio, Canje
+from .canje_modelos import db, Provincia, Municipio, Canje
 from .adm_db import get_db, close_db, insertar_datos_canje
 import random
 import time
@@ -34,6 +34,7 @@ UPLOAD_FOLDER = os.path.join('canje', 'imagenes', 'aprocesar')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 TEMP_UPLOAD_FOLDER = 'temp_uploads'
 os.makedirs(TEMP_UPLOAD_FOLDER, exist_ok=True)
+
 
 # *** CONFIGURACIÓN DE LAS CREDENCIALES DE AZURE ***
 # Debes configurar estas variables de entorno o directamente aquí con tus claves y endpoint
@@ -62,8 +63,6 @@ else:
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-
-
 # *** FUNCIÓN DE EXTRACCIÓN DE TEXTO CON AZURE COMPUTER VISION ***
 def extract_text_from_image_azure(image_path):
     if not computervision_client:
@@ -89,7 +88,6 @@ def extract_text_from_image_azure(image_path):
     except Exception as e:
         logging.error(f"Error al realizar OCR con Azure Computer Vision: {e}")
         return None
-
 
 # *** FUNCIÓN DE EXTRACCIÓN DE DATOS DEL DNI CON AZURE DOCUMENT INTELLIGENCE ***
 def extract_dni_data_azure(image_bytes):
@@ -149,22 +147,10 @@ def regla_frente_dni(ocr_text):
         apellidos = apellido_match.group(1).strip() if apellido_match else None
         numero_documento = dni_match.group(1).strip() if dni_match else None
 
-        return {'nombre': nombre, 'apellidos': apellidos, 'numero_documento': numero_documento}
+        return {'nombre': nombre, 'apellidos': apellidos, 'numero_documento': numero_documento, 'ocr_text': ocr_text}
     else:
         return {'error': 'La imagen no corresponde al frente del DNI.'}
 
-# def regla_dorso_dni(ocr_text):
-#     if not ocr_text:
-#         return {'error': 'No se pudo realizar OCR en la imagen del dorso del DNI.'}
-
-#     apellido_nombre_match = re.search(r"([A-Z]+)\s*<<\s*([A-Z]+(?:\s*[A-Z]+)*)\s*<", ocr_text)
-#     numero_doc_match = re.search(r"([A-Z0-9]+)<", ocr_text)
-
-#     apellidos = apellido_nombre_match.group(1).strip() if apellido_nombre_match else None
-#     nombre = apellido_nombre_match.group(2).strip() if apellido_nombre_match else None
-#     numero_documento = numero_doc_match.group(1).strip() if numero_doc_match else None
-
-#     return {'nombre': nombre, 'apellidos': apellidos, 'numero_documento': numero_documento}
 def regla_dorso_dni(ocr_text):
     if not ocr_text:
         return {'error': 'No se pudo realizar OCR en la imagen del dorso del DNI.'}
@@ -179,74 +165,8 @@ def regla_dorso_dni(ocr_text):
     nombre = apellido_nombre_match.group(2).strip() if apellido_nombre_match else None
     numero_documento = numero_doc_match.group(1).strip() if numero_doc_match else None
 
-    return {'nombre': nombre, 'apellidos': apellidos, 'numero_documento': numero_documento}
+    return {'nombre': nombre, 'apellidos': apellidos, 'numero_documento': numero_documento, 'ocr_text': ocr_text}
 
-# def regla_psicofisico(ocr_text):
-#     if not ocr_text:
-#         return {'error': 'No se pudo realizar OCR en el Psicofísico.'}
-
-#     if "PSICOFISICO" not in ocr_text.upper() and \
-#         "PSICOFISICA" not in ocr_text.upper() and \
-#         "PSICOFÍSICO" not in ocr_text.upper() and \
-#         "PSICOFÍSICA" not in ocr_text.upper():
-#              return {'error': 'No se encontró la palabra "PSICOFISICO" en el documento. No es un psicofísico válido.'}
-
-#     nombre_match = re.search(r"NOMBRE(?:S)?\s*:\s*([A-Z\s]+)", ocr_text, re.IGNORECASE)
-#     apellido_match = re.search(r"APELLIDO(?:S)?\s*:\s*([A-Z\s]+)", ocr_text, re.IGNORECASE)
-#     dni_match = re.search(r"D\.N\.I\.?\s*:\s*(\d{7,9})", ocr_text, re.IGNORECASE)
-#     prestador_match = re.search(r"PRESTADOR\s*:\s*([A-Z\s\d\.\-]+)", ocr_text, re.IGNORECASE) # Ajustar regex según formato
-#     fecha_examen_match = re.search(r"FECHA\s*DE\s*EXAMEN\s*:\s*(\d{2}/\d{2}/\d{4})", ocr_text, re.IGNORECASE) # Ajustar regex según formato
-
-#     nombre = nombre_match.group(1).strip() if nombre_match else None
-#     apellido = apellido_match.group(1).strip() if apellido_match else None
-#     dni = dni_match.group(1).strip() if dni_match else None
-#     prestador = prestador_match.group(1).strip() if prestador_match else None
-#     fecha_examen = fecha_examen_match.group(1).strip() if fecha_examen_match else None
-
-#     return {
-#         'psicofisico_nombre': nombre,
-#         'psicofisico_apellido': apellido,
-#         'psicofisico_dni': dni,
-#         'psicofisico_prestador': prestador,
-#         'psicofisico_f_examen': fecha_examen
-#     }
-
-# def regla_psicofisico(ocr_text):
-#     if not ocr_text:
-#         return {'error': 'No se pudo realizar OCR en el Psicofísico.'}
-
-#     if "PSICOFISICO" not in ocr_text.upper() and \
-#        "PSICOFISICA" not in ocr_text.upper() and \
-#        "PSICOFÍSICO" not in ocr_text.upper() and \
-#        "PSICOFÍSICA" not in ocr_text.upper():
-#         return {'error': 'No se encontró la palabra "PSICOFISICO", "PSICOFISICA", "PSICOFÍSICO" o "PSICOFÍSICA" en el documento. No es un psicofísico válido.'}
-
-#     # Intento de expresiones regulares más flexibles (necesitan ajuste con el texto completo)
-#     apellido_match = re.search(r"APELLIDO:\s*(\w+\s*\w*)", ocr_text, re.IGNORECASE)
-#     nombre_match = re.search(r"NOMBRE:\s*(\w+\s*\w*\s*\w*)", ocr_text, re.IGNORECASE)
-#     dni_match = re.search(r"DNI:\s*(\d{7,9})", ocr_text, re.IGNORECASE)
-#     prestador_match = re.search(r"PRESTADOR:\s*(.+?)(?:APELLIDO:|F\. EXAMEN:)", ocr_text, re.IGNORECASE | re.DOTALL)
-#     fecha_examen_match = re.search(r"F\. EXAMEN:\s*(\d{2}/\d{2}/\d{4})", ocr_text, re.IGNORECASE)
-
-#     apellido = apellido_match.group(1).strip() if apellido_match else None
-#     nombre = nombre_match.group(1).strip() if nombre_match else None
-#     dni = dni_match.group(1).strip() if dni_match else None
-#     prestador = prestador_match.group(1).strip() if prestador_match else None
-#     fecha_examen = fecha_examen_match.group(1).strip() if fecha_examen_match else None
-
-#     # Limpieza adicional para apellido y nombre (remover caracteres no deseados al final)
-#     if apellido:
-#         apellido = re.sub(r'\s*DNI$', '', apellido).strip()
-#     if nombre:
-#         nombre = re.sub(r'\s*CATEGORIA$', '', nombre).strip()
-        
-#     return {
-#         'psicofisico_nombre': nombre,
-#         'psicofisico_apellido': apellido,
-#         'psicofisico_dni': dni,
-#         'psicofisico_prestador': prestador,
-#         'psicofisico_f_examen': fecha_examen
-#     }
 
 def regla_psicofisico(ocr_text):
     logging.debug(f"OCR Text Psicofisico: {ocr_text}")
@@ -358,7 +278,6 @@ def procesar_certificado_curso(ocr_text):
     print(f"Datos del OCR CURSOS (MEJORADO): {json.dumps(data, indent=4)}")
     return data
     
-    
 def procesar_licencia_linti(ocr_text):
     """
     Extrae información específica del OCR de la licencia LINTI.
@@ -419,43 +338,6 @@ def procesar_licencia_linti(ocr_text):
     print(f"Datos del OCR LINTI (MEJORADO): {json.dumps(data, indent=4)}")
     return data
 
-# def procesar_certificado_legalidad(ocr_text, datos_dni=None):
-#     """
-#     Verifica si el OCR contiene "CERTIFICADO DE LEGALIDAD" para determinar su validez.
-#     Si es válido, asigna los datos de nombre, apellido y DNI proporcionados.
-
-#     Args:
-#         ocr_text (str): El texto OCR extraído del certificado de legalidad.
-#         datos_dni (dict, optional): Un diccionario con 'nombre', 'apellido' y 'dni'
-#                                      extraídos del DNI. Defaults to None.
-
-#     Returns:
-#         dict: Un diccionario con la información del certificado de legalidad y su validez.
-#     """
-#     if not ocr_text:
-#         return {'error': 'No se pudo realizar OCR en el Certificado de Legalidad.'}
-
-#     if "CERTIFICADO DE LEGALIDAD" not in ocr_text.upper():
-#         return {'error': 'No se encontró la frase "CERTIFICADO DE LEGALIDAD" en el documento. No es un certificado de legalidad válido.'}
-
-#     certificado_valido = True
-#     data = {
-#         'certificado_legalidad_valido': certificado_valido,
-#         'curso_certificado_imagen': ocr_text,  # Asignamos el ocr_text a este campo
-#         'legalidad_nombre': None,
-#         'legalidad_apellido': None,
-#         'legalidad_dni': None,
-#         'legalidad_ocr_text': ocr_text  # Mantenemos el ocr_text original
-#     }
-
-#     if certificado_valido and datos_dni:
-#         data['legalidad_nombre'] = datos_dni.get('nombre')
-#         data['legalidad_apellido'] = datos_dni.get('apellido')
-#         data['legalidad_dni'] = datos_dni.get('dni')
-
-#     print(f"Datos del OCR LEGALIDAD (VALIDACIÓN POR PALABRA CLAVE): {data}")
-#     return data
-
 def procesar_certificado_legalidad(ocr_text, datos_dni=None):
 
     logging.debug(f"OCR Text Certificado de Legalidad: {ocr_text}")
@@ -502,10 +384,6 @@ def procesar_certificado_legalidad(ocr_text, datos_dni=None):
     print(f"Datos del OCR LEGALIDAD (CON INTENTO DE EXTRACCIÓN): {data}")
 
     return data
-
-
-
-
 
 # *** REGLAS DE VALIDACIÓN DE DOCUMENTOS ***
 # Aquí puedes definir las reglas de validación para cada tipo de documento
@@ -555,140 +433,6 @@ def upload_document():
 
     return jsonify({'error': 'Error al cargar el documento'}), 500
 
-# @canje_bp.route('/upload', methods=['POST'])
-# def upload_document():
-#     if 'document' not in request.files:
-#         return jsonify({'error': 'No se proporcionó ningún documento'}), 400
-
-#     document = request.files['document']
-#     document_type = request.form.get('document_type')
-
-#     if document.filename == '':
-#         return jsonify({'error': 'No se seleccionó ningún documento'}), 400
-
-#     if document:
-#         filename = f"{document_type}_{document.filename}"
-#         filepath = os.path.join(TEMP_UPLOAD_FOLDER, filename)
-#         document.save(filepath)
-
-#         try:
-#             if document_type == 'dorso_dni':
-#                 filepath = os.path.join(TEMP_UPLOAD_FOLDER, filename)
-#                 document.save(filepath)
-
-#                 mrz_data = extract_mrz_data(filepath)
-#                 if mrz_data:
-#                     return jsonify({
-#                         'filename': filename,
-#                         'document_type': document_type,
-#                         'mrz_data': mrz_data
-#                     })
-#                 else:
-#                     # Si no se pudo leer el MRZ, podrías intentar el enfoque de Azure (si quieres)
-#                     with open(filepath, "rb") as f:
-#                         image_bytes = f.read()
-#                     nombre, apellidos, numero_documento = extract_dni_data_azure(image_bytes)
-#                     if nombre and apellidos and numero_documento:
-#                         return jsonify({
-#                             'filename': filename,
-#                             'document_type': document_type,
-#                             'nombre': nombre,
-#                             'apellidos': apellidos,
-#                             'numero_documento': numero_documento,
-#                             'mrz_read_attempt': 'failed'
-#                         })
-#                     else:
-#                         return jsonify({
-#                             'filename': filename,
-#                             'document_type': document_type,
-#                             'error': 'No se pudieron leer los datos del dorso del DNI (MRZ y Azure).'
-#                         }), 400
-#             else:
-#                 ocr_text = extract_text_from_image_azure(filepath)
-#                 return jsonify({'filename': filename, 'document_type': document_type, 'ocr_text': ocr_text})
-#         finally:
-#             os.remove(filepath) # Asegurarse de eliminar el archivo temporal siempre
-
-#     return jsonify({'error': 'Error al cargar el documento'}), 500
-
-# @canje_bp.route('/upload', methods=['POST'])
-# def upload_document():
-#     if 'document' not in request.files:
-#         return jsonify({'error': 'No se proporcionó ningún documento'}), 400
-
-#     document = request.files['document']
-#     document_type = request.form.get('document_type')
-
-#     if document.filename == '':
-#         return jsonify({'error': 'No se seleccionó ningún documento'}), 400
-
-#     if document:
-#         filename = f"{document_type}_{document.filename}"
-#         filepath = os.path.join(TEMP_UPLOAD_FOLDER, filename)
-#         document.save(filepath)
-
-#         try:
-#             ocr_text = extract_text_from_image_azure(filepath)
- 
-#             if document_type == 'frente_dni':
-#                     resultado_validacion = regla_frente_dni(ocr_text)
-#                     return jsonify(resultado_validacion)
-#             elif document_type == 'dorso_dni' and ocr_text:
-#                     # Expresiones regulares para el dorso del DNI (manteniendo las últimas que funcionaron)
-#                     apellido_nombre_match = re.search(r"([A-Z]+)\s*<<\s*([A-Z]+(?:\s*[A-Z]+)*)\s*<", ocr_text)
-#                     numero_doc_match = re.search(r"([A-Z0-9]+)<", ocr_text)
-
-#                     apellidos = apellido_nombre_match.group(1).strip() if apellido_nombre_match else None
-#                     nombre = apellido_nombre_match.group(2).strip() if apellido_nombre_match else None
-#                     numero_documento = numero_doc_match.group(1).strip() if numero_doc_match else None
-
-#                     return jsonify({
-#                         'filename': filename,
-#                         'document_type': document_type,
-#                         'ocr_text': ocr_text,
-#                         'nombre': nombre,
-#                         'apellidos': apellidos,
-#                         'numero_documento': numero_documento
-#                     })
-#             elif ocr_text:
-#                     return jsonify({'filename': filename, 'document_type': document_type, 'ocr_text': ocr_text})
-#             else:
-#                     return jsonify({
-#                         'filename': filename,
-#                         'document_type': document_type,
-#                         'error': f'No se pudo extraer texto del {document_type} con OCR de Azure.'
-#                     }), 400
- 
-#             if document_type == 'dorso_dni' and ocr_text:
-#                 # Intenta extraer nombre, apellidos y número si es un DNI (esto puede necesitar ajustes)
-#                 nombre_match = re.search(r"NOMBRE\s+(.+)", ocr_text)
-#                 apellido_match = re.search(r"APELLIDO\s+(.+)", ocr_text)
-#                 numero_match = re.search(r"NRO\. DOC\s+(.+)", ocr_text)
-
-#                 nombre = nombre_match.group(1).strip() if nombre_match else None
-#                 apellidos = apellido_match.group(1).strip() if apellido_match else None
-#                 numero_documento = numero_match.group(1).strip() if numero_match else None
-
-#                 return jsonify({
-#                     'filename': filename,
-#                     'document_type': document_type,
-#                     'ocr_text': ocr_text,
-#                     'nombre': nombre,
-#                     'apellidos': apellidos,
-#                     'numero_documento': numero_documento
-#                 })
-#             elif ocr_text:
-#                 return jsonify({'filename': filename, 'document_type': document_type, 'ocr_text': ocr_text})
-#             else:
-#                 return jsonify({
-#                     'filename': filename,
-#                     'document_type': document_type,
-#                     'error': f'No se pudo extraer texto del {document_type} con OCR de Azure.'
-#                 }), 400
-#         finally:
-#             os.remove(filepath)
-
-#     return jsonify({'error': 'Error al cargar el documento'}), 500
     
 @canje_bp.route('/upload_camara', methods=['POST'])
 def upload_document_camara():
@@ -724,45 +468,6 @@ def upload_document_camara():
             os.remove(filepath)
 
     return jsonify({'error': 'Error al cargar el documento'}), 500
-# def upload_document_camara():
-#     if 'document' not in request.files:
-#         return jsonify({'error': 'No se proporcionó ninguna imagen'}), 400
-
-#     document = request.files['document']
-#     document_type = request.form.get('document_type')
-
-#     if document.filename == '':
-#         return jsonify({'error': 'No se seleccionó ninguna imagen'}), 400
-
-#     if document:
-#         filename = f"camara_{document_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png" # Nombre más descriptivo
-#         filepath = os.path.join(TEMP_UPLOAD_FOLDER, filename)
-#         document.save(filepath)
-
-#         try:
-#             if document_type == 'dorso_dni':
-#                 nombre, apellidos, numero_documento = extract_dni_data_azure(filepath)
-#                 if nombre and apellidos and numero_documento:
-#                     return jsonify({
-#                         'filename': filename,
-#                         'document_type': document_type,
-#                         'nombre': nombre,
-#                         'apellidos': apellidos,
-#                         'numero_documento': numero_documento
-#                     })
-#                 else:
-#                     return jsonify({
-#                         'filename': filename,
-#                         'document_type': document_type,
-#                         'error': 'No se pudieron leer los datos del dorso del DNI (Azure).'
-#                     }), 400
-#             else:
-#                 ocr_text = extract_text_from_image_azure(filepath)
-#                 return jsonify({'filename': filename, 'document_type': document_type, 'ocr_text': ocr_text})
-#         finally:
-#             os.remove(filepath) # Asegurarse de eliminar el archivo temporal siempre
-
-#     return jsonify({'error': 'Error al cargar la imagen de la cámara'}), 500
 
 @canje_bp.route('/', methods=['GET'])
 def canje_form():
@@ -793,7 +498,7 @@ def procesar_documentos():
 
             if doc_type == 'dorso_dni':
                 nombre, apellidos, numero_documento = extract_dni_data_azure(temp_filename)
-                processed_data[doc_type] = {'nombre': nombre, 'apellidos': apellidos, 'numero_documento': numero_documento}
+                processed_data[doc_type] = {'nombre': nombre, 'apellidos': apellidos, 'numero_documento': numero_documento, 'ocr_text': ocr_text}
             else:
                 ocr_text = extract_text_from_image_azure(temp_filename)
                 processed_data[doc_type] = {'ocr_text': ocr_text}
@@ -830,13 +535,6 @@ def get_municipios(provincia_id):
     close_db(conn)
     return jsonify(municipios)
 
-# @canje_bp.route('/guardar_datos', methods=['POST'])
-# def guardar_datos():
-#     data = request.json
-#     print("Datos a guardar:", json.dumps(data, indent=4)) # Imprimir los datos en formato JSON
-
-#     success, message = insertar_datos_canje(data)
-#     return jsonify({'success': True, 'message': 'Datos guardados'}), 200
 
 @canje_bp.route('/guardar_datos', methods=['POST'])
 def guardar_datos():
@@ -962,22 +660,61 @@ def buscar_registro():
         return redirect(url_for('ver_registro', tramite_id=tramite_id))
     return render_template('buscar_registro.html')
 
+
 @canje_bp.route('/procesar_y_enviar_mail/<int:canje_id>', methods=['POST'])
 def procesar_y_enviar_mail(canje_id):
     try:
         data = request.get_json()
         send_from_label = data.get('send_from')
         additional_text = data.get('additional_text', '')
+        print("Entro en la funcion con los valores", data, send_from_label, additional_text)
 
-        # 1. Obtener el registro de DatosDeCanje
-        datos_canje = DatosDeCanje.query.get_or_404(canje_id)
+        # 1. Obtener el registro de DatosDeCanje usando sqlite3
+        db = get_db()
+        try:
+            print(f"Datos Obtenidos en paso 1: ", canje_id)
+            canje = db.execute('SELECT * FROM DatosDeCanje WHERE id = ?', (canje_id,)).fetchone()
+            #print(f"Datos Obtenidos en paso 2: ", dict(canje))
+        except Exception as e:
+            current_app.logger.error(f"Error al obtener Canje: {e}")
+            return jsonify({'error': 'Error al obtener datos del canje'}), 500
+        
+        print(f"Datos Obtenidos en paso 2:  {canje['nombre']}, {canje['apellido']}, {canje['dni']}")
+        if not canje:
+            return jsonify({'error': 'Registro no encontrado'}), 404
 
         # 2. Obtener el municipio y su correo electrónico
-        municipio = Municipio.query.get_or_404(datos_canje.municipio_id)
-        send_to_email = municipio.mail_institucional
-
+        municipio = db.execute('SELECT * FROM municipios WHERE id = ?', (canje['municipio_id'],)).fetchone()
+        if not municipio:
+            return jsonify({'error': 'Municipio no encontrado'}), 404
+        
+        send_to_email = municipio['mail_institucional']
+        text_municipio = municipio['nombre']
+        print(f"Datos Obtenidos en paso 3:", send_to_email, text_municipio)
         # 3. Obtener la cuenta de envío desde la configuración
-        mail_account_config = current_app.config['MAIL_ACCOUNTS'].get(send_from_label)
+        #print("Claves en current_app.config:", config_canje.config.keys())
+        print("Claves en config_canje:", MAIL_ACCOUNTS.keys())
+        #mail_account_config = config_canje.config['MAIL_ACCOUNTS'].get(send_from_label)
+        #mail_account_config = current_app.config['MAIL_ACCOUNTS'].get(send_from_label)
+        mail_account_config = MAIL_ACCOUNTS.get(send_from_label)
+        print("Claves en mail_account_config:", mail_account_config.keys())
+        if mail_account_config:
+            email_address = mail_account_config.get('email')
+            password = mail_account_config.get('password')
+            
+            smtp_server = mail_account_config.get('SMTP_SERVER')
+            port = mail_account_config.get('PORT')
+            print(f"Configuración para '{send_from_label}':")
+            print(f"  Email: {email_address}")
+            print(f"  Password: {password}")
+            print(f"  SMTP Server: {smtp_server}")
+            print(f"  Port: {port}")
+        else:
+            print(f"No se encontró la configuración para '{send_from_label}'")
+            return jsonify({'error': 'Cuenta de envío no válida'}), 400
+        mail_desde_voy = mail_account_config['email']
+        print(f"Datos Obtenidos en paso 4: ", mail_desde_voy)
+        #print(f"Datos Obtenidos en paso 3: {mail_account_config}")
         if not mail_account_config:
             return jsonify({'error': 'Cuenta de envío no válida'}), 400
 
@@ -986,7 +723,7 @@ def procesar_y_enviar_mail(canje_id):
 
         # 4. Crear el cuerpo del correo electrónico
         subject = "Transacción aprobada lista para procesar"
-        body = f"Ya puede procesar la transacción solicitada por {datos_canje.nombre} {datos_canje.apellido}, DNI {datos_canje.dni} para el día de hoy.\n\n"
+        body = f"Ya puede procesar la transacción solicitada por {canje['nombre']}, {canje['apellido']}, DNI {canje['dni']} para el día de hoy.\n\n"
         if additional_text:
             body += "Datos adicionales:\n" + additional_text
 
@@ -997,7 +734,7 @@ def procesar_y_enviar_mail(canje_id):
 
         # 5. Enviar el correo electrónico usando SMTP (Outlook)
         try:
-            with smtplib.SMTP('smtp.office365.com', 587) as server:
+            with smtplib.SMTP('smtp.gmail.com', 587) as server:
                 server.ehlo()
                 server.starttls()
                 server.ehlo()
@@ -1005,7 +742,10 @@ def procesar_y_enviar_mail(canje_id):
                 server.sendmail(send_from_email, [send_to_email], msg.as_string())
             return jsonify({'success': 'Correo electrónico enviado correctamente'}), 200
         except Exception as e:
-            return jsonify({'error': f'Error al enviar el correo electrónico: {str(e)}'}), 500
+                print("Ocurrió un error al enviar el correo:")
+                print(type(e).__name__, e)
+        # except Exception as e:
+        #     return jsonify({'error': f'Error al enviar el correo electrónico: {str(e)}'}), 500
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500

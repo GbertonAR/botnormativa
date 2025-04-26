@@ -98,6 +98,10 @@
     {% if registro %}
         <div id="tooltip-data" style="display: none;">
             <div data-target="licencia_municipal">
+                <strong>DNI frente (Imagen):</strong> {{ registro.frente_dni_imagen }}
+                <strong>DNI reverso (Imagen):</strong> {{ registro.dorso_dni_imagen }}
+            </div>            
+            <div data-target="licencia_municipal">
                 <strong>Licencia Municipal Frente (Imagen):</strong> {{ registro.licencia_municipal_frente_data }}
                 <strong>Licencia Municipal Dorso (Imagen):</strong> {{ registro.licencia_municipal_dorso_data }}
             </div>

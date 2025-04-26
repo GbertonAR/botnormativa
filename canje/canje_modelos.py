@@ -3,28 +3,78 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
+# class Provincia(db.Model):
+#     __tablename__ = 'provincias'
+
+#     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+#     nombre = db.Column(db.String(100), unique=True, nullable=False)
+#     municipios = db.relationship('Municipio', backref='provincia', lazy=True)
+#     canjes = db.relationship('Canje', backref='provincia', lazy=True)
+
+#     def __repr__(self):
+#         return f"<Provincia {self.nombre}>"
 class Provincia(db.Model):
     __tablename__ = 'provincias'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     nombre = db.Column(db.String(100), unique=True, nullable=False)
-    municipios = db.relationship('Municipio', backref='provincia', lazy=True)
-    canjes = db.relationship('Canje', backref='provincia', lazy=True)
+
+    municipios = db.relationship('Municipio', back_populates='provincia', lazy=True)
+    canjes = db.relationship('Canje', back_populates='provincia', lazy=True)
 
     def __repr__(self):
         return f"<Provincia {self.nombre}>"
 
+# class Municipio(db.Model):
+#     __tablename__ = 'municipios'
+
+#     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+#     nombre = db.Column(db.String(100), nullable=False)
+#     provincia_id = db.Column(db.Integer, db.ForeignKey('provincias.id'), nullable=False)
+#     canjes = db.relationship('Canje', backref='municipio', lazy=True)
+
+#     def __repr__(self):
+#         return f"<Municipio {self.nombre}>"
 class Municipio(db.Model):
     __tablename__ = 'municipios'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     nombre = db.Column(db.String(100), nullable=False)
+
     provincia_id = db.Column(db.Integer, db.ForeignKey('provincias.id'), nullable=False)
-    canjes = db.relationship('Canje', backref='municipio', lazy=True)
+    provincia = db.relationship('Provincia', back_populates='municipios')
+
+    canjes = db.relationship('Canje', back_populates='municipio', lazy=True)
 
     def __repr__(self):
         return f"<Municipio {self.nombre}>"
 
+# class Canje(db.Model):
+#     __tablename__ = 'DatosDeCanje'
+
+#     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+#     codigo_transaccion = db.Column(db.String(50), unique=True, nullable=False)
+#     fecha_hora = db.Column(db.TIMESTAMP, default=db.func.current_timestamp())
+#     ciudadano_presente = db.Column(db.Boolean)
+#     provincia_id = db.Column(db.Integer, db.ForeignKey('provincias.id'))
+#     municipio_id = db.Column(db.Integer, db.ForeignKey('municipios.id'))
+#     nombre_ciudadano = db.Column(db.String(100))
+#     apellido_ciudadano = db.Column(db.String(100))
+#     documento_frente_dni = db.Column(db.String(255))
+#     documento_dorso_dni = db.Column(db.String(255))
+#     documento_licencia_municipal_frente = db.Column(db.String(255))
+#     documento_licencia_municipal_dorso = db.Column(db.String(255))
+#     documento_psicofisico = db.Column(db.String(255))
+#     documento_certificado_curso = db.Column(db.String(255))
+#     documento_licencia_linti = db.Column(db.String(255))
+#     documento_certificado_legalidad = db.Column(db.String(255))
+#     datos_dni_dorso = db.Column(db.JSON)
+
+#     provincia = db.relationship('Provincias', backref=db.backref('canjes', lazy=True))
+#     municipio = db.relationship('Municipios', backref=db.backref('canjes', lazy=True))
+
+#     def __repr__(self):
+#         return f"<Canje {self.codigo_transaccion}>"
 class Canje(db.Model):
     __tablename__ = 'DatosDeCanje'
 
@@ -32,8 +82,10 @@ class Canje(db.Model):
     codigo_transaccion = db.Column(db.String(50), unique=True, nullable=False)
     fecha_hora = db.Column(db.TIMESTAMP, default=db.func.current_timestamp())
     ciudadano_presente = db.Column(db.Boolean)
-    provincia_id = db.Column(db.Integer, db.ForeignKey('provincias.id'))
-    municipio_id = db.Column(db.Integer, db.ForeignKey('municipios.id'))
+
+    provincia_id = db.Column(db.Integer, db.ForeignKey('provincias.id'), nullable=False)
+    municipio_id = db.Column(db.Integer, db.ForeignKey('municipios.id'), nullable=False)
+
     nombre_ciudadano = db.Column(db.String(100))
     apellido_ciudadano = db.Column(db.String(100))
     documento_frente_dni = db.Column(db.String(255))
@@ -46,11 +98,12 @@ class Canje(db.Model):
     documento_certificado_legalidad = db.Column(db.String(255))
     datos_dni_dorso = db.Column(db.JSON)
 
-    provincia = db.relationship('Provincias', backref=db.backref('canjes', lazy=True))
-    municipio = db.relationship('Municipios', backref=db.backref('canjes', lazy=True))
+    provincia = db.relationship('Provincia', back_populates='canjes')
+    municipio = db.relationship('Municipio', back_populates='canjes')
 
     def __repr__(self):
         return f"<Canje {self.codigo_transaccion}>"
+
 
 # --- Ejemplo de cómo inicializar los modelos en tu aplicación Flask ---
 # from flask import Flask
