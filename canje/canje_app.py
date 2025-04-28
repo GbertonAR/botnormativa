@@ -64,9 +64,9 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # *** FUNCIÓN DE EXTRACCIÓN DE TEXTO CON AZURE COMPUTER VISION ***
-def extract_text_from_image_azure(image_path):
+def extract_text_from_image_azure(image_path, min_confidence_threshold=0.6):
     if not computervision_client:
-        return "Error: Computer Vision no está configurado."
+        return None, "Error: Computer Vision no está configurado."
     try:
         with open(image_path, "rb") as image_stream:
             read_response = computervision_client.read_in_stream(image_stream, raw=True)
@@ -80,14 +80,50 @@ def extract_text_from_image_azure(image_path):
             time.sleep(1)
 
         text = ""
+        low_confidence_words = []
         if read_result.status == OperationStatusCodes.succeeded:
             for read_result_page in read_result.analyze_result.read_results:
                 for line in read_result_page.lines:
-                    text += line.text + "\n"
-        return text.strip()
+                    for word in line.words:
+                        text += word.text + " "
+                        if word.confidence < min_confidence_threshold:
+                            low_confidence_words.append(word.text)
+                text += "\n"
+
+        text = text.strip()
+        quality_issue = None
+        if low_confidence_words and (len(low_confidence_words) / text.count(' ') if text.count(' ') > 0 else 0) > 0.3:
+            quality_issue = "Posible baja calidad de imagen detectada. Muchas palabras con baja confianza en el OCR."
+
+        return text, quality_issue
+
     except Exception as e:
         logging.error(f"Error al realizar OCR con Azure Computer Vision: {e}")
-        return None
+        return None, f"Error al realizar OCR: {e}"
+# def extract_text_from_image_azure(image_path):
+#     if not computervision_client:
+#         return "Error: Computer Vision no está configurado."
+#     try:
+#         with open(image_path, "rb") as image_stream:
+#             read_response = computervision_client.read_in_stream(image_stream, raw=True)
+#         read_operation_location = read_response.headers["Operation-Location"]
+#         operation_id = read_operation_location.split("/")[-1]
+
+#         while True:
+#             read_result = computervision_client.get_read_result(operation_id)
+#             if read_result.status not in ["notStarted", "running"]:
+#                 break
+#             time.sleep(1)
+
+#         text = ""
+#         if read_result.status == OperationStatusCodes.succeeded:
+#             for read_result_page in read_result.analyze_result.read_results:
+#                 for line in read_result_page.lines:
+#                     text += line.text + "\n"
+#         return text.strip()
+#     except Exception as e:
+#         logging.error(f"Error al realizar OCR con Azure Computer Vision: {e}")
+#         return None
 
 # *** FUNCIÓN DE EXTRACCIÓN DE DATOS DEL DNI CON AZURE DOCUMENT INTELLIGENCE ***
 def extract_dni_data_azure(image_bytes):
@@ -399,6 +435,7 @@ REGLAS_DOCUMENTOS = {
 }
 
 @canje_bp.route('/upload', methods=['POST'])
+@canje_bp.route('/upload', methods=['POST'])
 def upload_document():
     if 'document' not in request.files:
         return jsonify({'error': 'No se proporcionó ningún documento'}), 400
@@ -415,23 +452,67 @@ def upload_document():
         document.save(filepath)
 
         try:
-            ocr_text = extract_text_from_image_azure(filepath)
+            ocr_result = extract_text_from_image_azure(filepath)  # Ahora ocr_result es una tupla (text, quality_issue)
+            ocr_text = ocr_result[0]  # Obtenemos el texto extraído
+            quality_warning = ocr_result[1] if len(ocr_result) > 1 else None # Obtenemos la advertencia de calidad
+
             if document_type in REGLAS_DOCUMENTOS:
                 funcion_regla = REGLAS_DOCUMENTOS[document_type]
                 resultado_validacion = funcion_regla(ocr_text)
+                if quality_warning:
+                    resultado_validacion['quality_warning'] = quality_warning
                 return jsonify(resultado_validacion)
             elif ocr_text:
-                return jsonify({'filename': filename, 'document_type': document_type, 'ocr_text': ocr_text})
+                response = {'filename': filename, 'document_type': document_type, 'ocr_text': ocr_text}
+                if quality_warning:
+                    response['quality_warning'] = quality_warning
+                return jsonify(response)
             else:
+                error_message = f'No se pudo extraer texto del {document_type} con OCR de Azure.'
+                if quality_warning:
+                    error_message += f" Advertencia: {quality_warning}"
                 return jsonify({
                     'filename': filename,
                     'document_type': document_type,
-                    'error': f'No se pudo extraer texto del {document_type} con OCR de Azure.'
+                    'error': error_message
                 }), 400
         finally:
             os.remove(filepath)
 
     return jsonify({'error': 'Error al cargar el documento'}), 500
+# def upload_document():
+#     if 'document' not in request.files:
+#         return jsonify({'error': 'No se proporcionó ningún documento'}), 400
+
+#     document = request.files['document']
+#     document_type = request.form.get('document_type')
+
+#     if document.filename == '':
+#         return jsonify({'error': 'No se seleccionó ningún documento'}), 400
+
+#     if document:
+#         filename = f"{document_type}_{document.filename}"
+#         filepath = os.path.join(TEMP_UPLOAD_FOLDER, filename)
+#         document.save(filepath)
+
+#         try:
+#             ocr_text = extract_text_from_image_azure(filepath)
+#             if document_type in REGLAS_DOCUMENTOS:
+#                 funcion_regla = REGLAS_DOCUMENTOS[document_type]
+#                 resultado_validacion = funcion_regla(ocr_text)
+#                 return jsonify(resultado_validacion)
+#             elif ocr_text:
+#                 return jsonify({'filename': filename, 'document_type': document_type, 'ocr_text': ocr_text})
+#             else:
+#                 return jsonify({
+#                     'filename': filename,
+#                     'document_type': document_type,
+#                     'error': f'No se pudo extraer texto del {document_type} con OCR de Azure.'
+#                 }), 400
+#         finally:
+#             os.remove(filepath)
+
+#     return jsonify({'error': 'Error al cargar el documento'}), 500
 
     
 @canje_bp.route('/upload_camara', methods=['POST'])
@@ -476,6 +557,10 @@ def canje_form():
 @canje_bp.route('/capture_canje', methods=['GET'])
 def capture_canje_form():
     return render_template('capture_canje.html')
+
+@canje_bp.route('/invento', methods=['GET'])
+def invento():
+    return render_template('invento.html')
 
 @canje_bp.route('/ver_datos_canje', methods=['GET'])
 def capture_ver_datos_canje():

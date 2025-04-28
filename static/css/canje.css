@@ -82,14 +82,14 @@ nav a:hover {
     outline: none;
 }
 
-
+/*
 .container {
     display: flex;
 }
-
+*/
 .document-buttons {
-    width: 250px;
-    padding-right: 20px;
+    width: 200px;
+    padding-right: 5px;
 }
 
 .scan-button {

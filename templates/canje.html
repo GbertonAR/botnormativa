@@ -9,17 +9,42 @@
     <style>
         .container {
             display: grid;
-            grid-template-columns: 1fr 1.5fr 1.5fr 1.5fr; /* Ajuste de proporciones de columnas */
-            gap: 10px; /* Reducción del espacio entre elementos */
+            /*width: 70%;*/
+            grid-template-columns: 1fr 3fr; /* Una columna más angosta y otra más grande */
+            /* grid-template-columns: 0.5fr 1.2fr 0.5fr 0.5fr;  Ajuste de proporciones de columnas */
+            /*gap: 20px;  Reducción del espacio entre elementos */
+            gap: 1rem; /* Espacio entre columnas */
             padding: 10px; /* Reducción del padding general */
+            align-items: flex-start;
+        }
+
+        .container-adiccional {
+            display: grid;
+            /*width: 70%;*/
+            grid-template-columns: 1fr 3fr; /* Una columna más angosta y otra más grande */
+            /* grid-template-columns: 0.5fr 1.2fr 0.5fr 0.5fr;  Ajuste de proporciones de columnas */
+            /*gap: 20px;  Reducción del espacio entre elementos */
+            gap: 1rem; /* Espacio entre columnas */
+            padding: 10px; /* Reducción del padding general */
+            align-items: flex-start;
+        }        
+        .container-button .file-list {
+            display: grid; 
+            /*width: 20%;*/
+            grid-template-columns: repeat(3, 1fr); /* 3 columnas iguales */
+            /*grid-template-columns: 0.5fr 1.2fr 0.5fr 0.5fr;  Ajuste de proporciones de columnas */
+            /*gap: 2px;  Reducción del espacio entre elementos */
+            /* padding: 3px;  Reducción del padding general */
+            padding-right: 1rem;
         }
         .document-buttons button {
             display: block;
-            width: 90%; /* Achicar la botonera */
-            margin: 5px auto; /* Centrar y reducir margen vertical */
-            padding: 8px; /* Reducir el padding de los botones */
-            box-sizing: border-box;
+            width: 100%; /* Achicar la botonera */
+            margin: 5px 0; /* Centrar y reducir margen vertical */
+            padding-left: 8px; /* Reducir el padding de los botones */
+            /* box-sizing: border-box; */
             font-size: 0.9em; /* Reducir el tamaño de la fuente de los botones */
+            /* align-items: left; */
         }
         .preview-container {
             display: flex;
@@ -53,9 +78,33 @@
             margin: 3px 0;
             font-size: 0.9em; /* Reducir el tamaño de la fuente de los datos */
         }
+        .file-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        .file-item {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            overflow: hidden;
+            text-align: center;
+            padding: 1rem;
+        }
+        .file-item img {
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 0.5rem;
+        }
+        .file-item p {
+            font-size: 0.9rem;
+            color: #555;
+            word-break: break-word;
+        }
     </style>
 
     <div class="container">
+        <!-- Primera columna: botones -->
         <div class="document-buttons">
             <button id="frente_dni_button" class="scan-button rojo" onclick="triggerUpload('frente_dni')">Frente DNI</button>
             <button id="dorso_dni_button" class="scan-button rojo" onclick="triggerUpload('dorso_dni')">Dorso DNI</button>
@@ -67,54 +116,73 @@
             <button id="certificado_legalidad_button" class="scan-button rojo" onclick="triggerUpload('certificado_legalidad')">Certificado Legalidad</button>
             <button type="button" id="procesar_documentos_button" onclick="procesarDocumentos()">Procesar Documentos</button>
         </div>
-        <div class="preview-container">
-            <strong>Frente DNI</strong>
-            <div id="preview_frente_dni" class="preview"></div>
-        </div>
-        <div class="preview-container">
-            <strong>Dorso DNI</strong>
-            <div id="preview_dorso_dni" class="preview"></div>
-        </div>
-        <div class="preview-container">
-            <strong>Datos DNI</strong>
-            <div id="dorso_dni_info" class="document-info" style="display: none;">
-                <p><strong>Nombre:</strong> <span id="nombre_leido"></span></p>
-                <p><strong>Apellidos:</strong> <span id="apellidos_leido"></span></p>
-                <p><strong>Número:</strong> <span id="numero_documento_leido"></span></p>
+    
+        <!-- Segunda columna: previews -->
+        <div class="container-button">
+            <div class="file-list">
+                <!-- Preview individual -->
+                <div class="file-item">
+                    <div class="preview-container">
+                        <strong>Frente DNI</strong>
+                        <div id="preview_frente_dni" class="preview"></div>
+                    </div>
+                </div>
+                <div class="file-item">
+                    <div class="preview-container">
+                        <strong>Dorso DNI</strong>
+                        <div id="preview_dorso_dni" class="preview"></div>
+                    </div>
+                </div>
+                <div class="file-item">
+                    <div class="preview-container">
+                        <strong>Datos DNI</strong>
+                        <div id="dorso_dni_info" class="document-info" style="display: none;">
+                            <p><strong>Nombre:</strong> <span id="nombre_leido"></span></p>
+                            <p><strong>Apellidos:</strong> <span id="apellidos_leido"></span></p>
+                            <p><strong>Número:</strong> <span id="numero_documento_leido"></span></p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Más previews -->
+                <div class="file-item">
+                    <div class="preview-container">
+                        <strong>Licencia Municipal Frente</strong>
+                        <div id="preview_licencia_municipal_frente" class="preview"></div>
+                    </div>
+                </div>
+                <div class="file-item">
+                    <div class="preview-container">
+                        <strong>Licencia Municipal Dorso</strong>
+                        <div id="preview_licencia_municipal_dorso" class="preview"></div>
+                    </div>
+                </div>
+                <div class="file-item">
+                    <div class="preview-container">
+                        <strong>Psicofisico</strong>
+                        <div id="preview_psicofisico" class="preview"></div>
+                    </div>
+                </div>
+                <div class="file-item">
+                    <div class="preview-container">
+                        <strong>Certificado Curso</strong>
+                        <div id="preview_certificado_curso" class="preview"></div>
+                    </div>
+                </div>
+                <div class="file-item">
+                    <div class="preview-container">
+                        <strong>Licencia Linti</strong>
+                        <div id="preview_licencia_linti" class="preview"></div>
+                    </div>
+                </div>
+                <div class="file-item">
+                    <div class="preview-container">
+                        <strong>Certificado Legalidad</strong>
+                        <div id="preview_certificado_legalidad" class="preview"></div>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="document-buttons">
-            <p> </p>
-        </div>
-        <div class="preview-container">
-            <strong>Licencia Municipal Frente</strong>
-            <div id="preview_licencia_municipal_frente" class="preview"></div>
-        </div>
-        <div class="preview-container">
-            <strong>Licencia Municipal Dorso</strong>
-            <div id="preview_licencia_municipal_dorso" class="preview"></div>
-        </div>
-        <div class="preview-container">
-            <strong>Psicofisico</strong>
-            <div id="preview_psicofisico" class="preview"></div>
-        </div>
-        <div class="document-buttons">
-            <p> </p>
-        </div>
-        <div class="preview-container">
-            <strong>Certificado Curso</strong>
-            <div id="preview_certificado_curso" class="preview"></div>
-        </div>
-        <div class="preview-container">
-            <strong>Licencia Linti</strong>
-            <div id="preview_licencia_linti" class="preview"></div>
-        </div>
-        <div class="preview-container">
-            <strong>Certificado Legalidad</strong>
-            <div id="preview_certificado_legalidad" class="preview"></div>
-        </div>
     </div>
-
     <!-- <div class="card" aline="center">
         <div id="additional-data-form">
             <h3>Información Adicional</h3>
@@ -149,38 +217,41 @@
         <input type="hidden" name="document_type" id="document_type">
     </form> -->
 
-    <div class="card" aline="center">
-        <div id="additional-data-form">
-            <h3>Información Adicional</h3>
-            <div>
-                <label>¿El ciudadano está presente?</label>
-                <input type="radio" id="ciudadano_presente_no" name="ciudadano_presente" value="NO" checked> NO
-                <input type="radio" id="ciudadano_presente_si" name="ciudadano_presente" value="SI"> SI
+    <div class="container">
+        <p> </p>
+        <div class="card" aline="center">
+            <div id="additional-data-form">
+                <h3>Información Adicional</h3>
+                <div>
+                    <label>¿El ciudadano está presente?</label>
+                    <input type="radio" id="ciudadano_presente_no" name="ciudadano_presente" value="NO" checked> NO
+                    <input type="radio" id="ciudadano_presente_si" name="ciudadano_presente" value="SI"> SI
+                </div>
+                <div>
+                    <label for="fecha_no_presencial">Fecha (en caso de no estar presente):</label>
+                    <input type="date" id="fecha_no_presencial" name="fecha_no_presencial">
+                </div>
+                <div>
+                    <label for="solicita_licencia_extendida">¿Solicita Licencia Extendida?</label>
+                    <select id="solicita_licencia_extendida" name="solicita_licencia_extendida">
+                        <option value="NO" selected>NO</option>
+                        <option value="SI">SI</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="provincia">Provincia:</label>
+                    <select id="provincia">
+                        <option value="">Seleccione una provincia</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="municipio">Municipio:</label>
+                    <select id="municipio" disabled>
+                        <option value="">Seleccione un municipio</option>
+                    </select>
+                </div>
+                <button type="button" onclick="enviarDatos()">Guardar y Generar Transacción</button>
             </div>
-            <div>
-                <label for="fecha_no_presencial">Fecha (en caso de no estar presente):</label>
-                <input type="date" id="fecha_no_presencial" name="fecha_no_presencial">
-            </div>
-            <div>
-                <label for="solicita_licencia_extendida">¿Solicita Licencia Extendida?</label>
-                <select id="solicita_licencia_extendida" name="solicita_licencia_extendida">
-                    <option value="NO" selected>NO</option>
-                    <option value="SI">SI</option>
-                </select>
-            </div>
-            <div>
-                <label for="provincia">Provincia:</label>
-                <select id="provincia">
-                    <option value="">Seleccione una provincia</option>
-                </select>
-            </div>
-            <div>
-                <label for="municipio">Municipio:</label>
-                <select id="municipio" disabled>
-                    <option value="">Seleccione un municipio</option>
-                </select>
-            </div>
-            <button type="button" onclick="enviarDatos()">Guardar y Generar Transacción</button>
         </div>
     </div>
     <div id="qr-container" style="display: none;">
